@@ -314,10 +314,10 @@ function battlePointer(kind, x, y) {   // x,y in arena (low-res) coordinates
 // ---------- drawing (pixel layer) ----------
 function sprAt(g, name, f, x, y, alpha, flash, flip) {
   const s = Art.sprite(name, f), px = Math.round(x - s.lw / 2), py = Math.round(y - s.lh + 6);
-  if (alpha < 1) g.globalAlpha = alpha;
+  if (alpha < 1) g.globalAlpha = alpha; const sm = g.imageSmoothingEnabled; g.imageSmoothingEnabled = !!s.ui;
   if (flip) { g.save(); g.translate(px + s.lw, py); g.scale(-1, 1); g.drawImage(s, 0, 0, s.lw, s.lh); if (flash > 0) g.drawImage(flashOf(s), 0, 0, s.lw, s.lh); g.restore(); }
   else { g.drawImage(s, px, py, s.lw, s.lh); if (flash > 0) g.drawImage(flashOf(s), px, py, s.lw, s.lh); }
-  g.globalAlpha = 1; return { px, py, w: s.lw, h: s.lh };
+  g.imageSmoothingEnabled = sm; g.globalAlpha = 1; return { px, py, w: s.lw, h: s.lh };
 }
 const _fc = new Map();
 function flashOf(s) { let t = _fc.get(s); if (!t) { t = Art.tint(s, 'rgba(255,255,255,0.85)'); _fc.set(s, t); } return t; }
@@ -342,7 +342,7 @@ function drawBattleWorld(g) {
     if (e.state === 'dig') { sprAt(g, 'wormdig', Math.floor(e.anim) % 2, e.x, e.y, 1, 0); return; }
     g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(Math.round(e.x - d.r), Math.round(e.y + 5), d.r * 2, 3);
     const off = d.fly ? -10 + Math.sin(e.anim * 0.7) * 2 : 0;
-    sprAt(g, d.spr, e.state === 'up' || d.boss ? Math.floor(e.t * 3) : Math.floor(e.anim), e.x, e.y + off, 1, e.flash, e.face < 0 && false);
+    sprAt(g, d.spr, e.state === 'up' || d.boss ? Math.floor(e.t * 3) : Math.floor(e.anim), e.x, e.y + off, 1, e.flash, e.face < 0);
     if (e.st.burn > 0) { g.fillStyle = Math.floor(e.anim) % 2 ? '#ff8a20' : '#ffd040'; g.fillRect(Math.round(e.x) - 2 + (Math.floor(e.anim) % 3), Math.round(e.y) - d.r - 8, 2, 3); }
     if (e.st.chill > 0) { g.fillStyle = 'rgba(140,230,255,0.45)'; g.fillRect(Math.round(e.x - d.r), Math.round(e.y - d.r - 2), d.r * 2, d.r * 2 + 6); }
     if (e.st.wet > 0) { g.fillStyle = '#80c8ff'; g.fillRect(Math.round(e.x) - 4, Math.round(e.y) - d.r - 4 + (Math.floor(e.anim * 2) % 3), 1, 2); g.fillRect(Math.round(e.x) + 3, Math.round(e.y) - d.r - 3, 1, 2); }
@@ -353,7 +353,7 @@ function drawBattleWorld(g) {
     if (!h.alive) { g.globalAlpha = 0.5; sprAt(g, h.def.spr, 0, h.x, h.y + 4, 0.35, 0); g.globalAlpha = 1; return; }
     g.fillStyle = 'rgba(0,0,0,0.4)'; g.fillRect(Math.round(h.x) - 7, Math.round(h.y) + 5, 14, 3);
     if (i === B.sel) { g.strokeStyle = h.def.col; g.lineWidth = 1; g.strokeRect(Math.round(h.x) - 9 + 0.5, Math.round(h.y) + 3 + 0.5, 18, 6); }
-    sprAt(g, h.def.spr, h.moving ? Math.floor(h.anim) : Math.floor(h.anim / 3), h.x, h.y, 1, h.flash, h.face < 0 && !h.def.melee ? false : h.face < 0);
+    sprAt(g, h.def.spr, h.moving ? Math.floor(h.anim) : Math.floor(h.anim / 3), h.x, h.y, 1, h.flash, h.face < 0);
     const w = 16; g.fillStyle = '#000'; g.fillRect(Math.round(h.x) - w / 2 - 1, Math.round(h.y) - 35, w + 2, 4); g.fillStyle = h.hp / h.maxhp < 0.3 ? '#e04040' : '#40d060'; g.fillRect(Math.round(h.x) - w / 2, Math.round(h.y) - 34, Math.max(1, Math.round(w * h.hp / h.maxhp)), 2);
     if (h.charge >= 100) { g.fillStyle = Math.floor(B.t * 6) % 2 ? '#ffd040' : '#ffffff'; g.fillRect(Math.round(h.x) - 1, Math.round(h.y) - 41, 3, 3); }
     if (h.order) { g.fillStyle = h.def.col; g.fillRect(Math.round(h.order.x) - 1, Math.round(h.order.y) - 1, 3, 3); }

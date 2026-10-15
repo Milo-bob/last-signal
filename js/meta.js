@@ -48,8 +48,8 @@ function topBar(title) {
   disc(ctx, 940, 36, 12, '#ffd040'); ctx.fillStyle = '#ffd040'; text(String(SAVE.gold), 966, 48, 28, '#ffd040');
   button(1130, 12, 120, 46, 'HOME', () => { scene = 'hub'; Snd.play('ui'); }, scene === 'hub', 22);
 }
-function smallSprite(name, x, y, sc, f) { const s = Art.sprite(name, f || 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(s, Math.round(x - s.lw * sc / 2), Math.round(y - s.lh * sc), s.lw * sc, s.lh * sc); }
-function faceSprite(name, cx, top, sc, f) { const s = Art.sprite(name, f || 0); ctx.imageSmoothingEnabled = false; const k = s.width / s.lw; ctx.drawImage(s, 0, 0, s.width, 30 * k, Math.round(cx - s.lw * sc / 2), top, s.lw * sc, 30 * sc); }
+function smallSprite(name, x, y, sc, f) { const s = Art.sprite(name, f || 0), k = s.ui || 1; ctx.imageSmoothingEnabled = !!s.ui; ctx.drawImage(s, Math.round(x - s.lw * sc * k / 2), Math.round(y - s.lh * sc * k + 6 * sc), s.lw * sc * k, s.lh * sc * k); }
+function faceSprite(name, cx, top, sc, f) { const s = Art.icon(name, f || 0); ctx.imageSmoothingEnabled = false; const k = s.width / s.lw; ctx.drawImage(s, 0, 0, s.width, 30 * k, Math.round(cx - s.lw * sc / 2), top, s.lw * sc, 30 * sc); }
 function stars(x, y, n, sz) { for (let i = 0; i < 3; i++) { ctx.fillStyle = i < n ? '#ffd040' : '#3a3a4a'; ctx.fillRect(x + i * (sz + 4), y, sz, sz); } }
 function bar(x, y, w, h, k, col, back) { ctx.fillStyle = '#000'; ctx.fillRect(x - 3, y - 3, w + 6, h + 6); ctx.fillStyle = back || '#2a2a3a'; ctx.fillRect(x, y, w, h); ctx.fillStyle = col; ctx.fillRect(x, y, Math.round(w * clamp(k, 0, 1)), h); }
 function gearLine(g) { return Object.keys(g.mods).map(k => '+' + g.mods[k] + '% ' + MOD_N[k]).join('   '); }
@@ -76,8 +76,8 @@ function drawTitle() {
 function drawHub() {
   hubBg();
   // squad display on the floor
-  const hs = Art.hero(SAVE.hero, Math.floor(time * 1.5) % 2); lx.drawImage(hs, 150 - (hs.lw >> 1), 136 - hs.lh + 6, hs.lw, hs.lh);
-  SAVE.squad.forEach((id, i) => { const h = HUNTER_BY[id]; const s = Art.sprite(h.spr, Math.floor(time * 1.5 + i) % 2); lx.drawImage(s, 190 + i * 40 - (s.lw >> 1), 136 - s.lh + 6, s.lw, s.lh); });
+  const hs = Art.hero(SAVE.hero, Math.floor(time * 1.5) % 2); lx.imageSmoothingEnabled = true; lx.drawImage(hs, 150 - (hs.lw >> 1), 136 - hs.lh + 6, hs.lw, hs.lh);
+  SAVE.squad.forEach((id, i) => { const h = HUNTER_BY[id]; const s = Art.sprite(h.spr, Math.floor(time * 1.5 + i) % 2); lx.drawImage(s, 190 + i * 40 - (s.lw >> 1), 136 - s.lh + 6, s.lw, s.lh); }); lx.imageSmoothingEnabled = false;
   blit(); topBar('HOLLOW CREEK');
   const items = [['STORY', 'story', 0], ['HERO', 'hero', 0], ['SQUAD', 'squad', 0], ['PREP ROOM', 'prep', 0], ['SUPPLY', 'supply', cratesReady()], ['MISSIONS', 'missions', claimable()], ['CODEX', 'codex', Math.max(0, codexCount() - (SAVE.cxSeen || 0))]];
   if (SAVE.stages.s15 && !SAVE.ending) items.push(['RETURN CONSOLE', 'choice', 0]);
@@ -114,7 +114,7 @@ function drawStory() {
   wrap(s.brief, 700, 20).forEach((l, i) => text(l, 66, 480 + i * 26, 20, '#d8e4ff'));
   text('ENEMIES', 66, 560, 16, '#80f0ff');
   const seen = {}; s.waves.forEach(w => w.forEach(e => seen[e[0]] = 1));
-  Object.keys(seen).forEach((t, i) => { const sp = Art.sprite(FOES[t].spr, 0), sc = FOES[t].boss ? 1 : 2; ctx.drawImage(sp, 70 + i * 74, 664 - sp.lh * sc, sp.lw * sc, sp.lh * sc); });
+  Object.keys(seen).forEach((t, i) => { const sp = Art.sprite(FOES[t].spr, 0), sc = FOES[t].boss ? 1 : 1.2; ctx.imageSmoothingEnabled = !!sp.ui || sp.lw > 60; ctx.drawImage(sp, 70 + i * 74, 664 - sp.lh * sc, sp.lw * sc, sp.lh * sc); });
   text('REWARD  $' + s.gold + '   ONYX ' + s.onyx + (s.unlock ? '   + NEW ROBOT' : ''), 420, 562, 18, '#ffd040');
   text('WAVES: ' + s.waves.length, 420, 590, 18, '#c8d8f8');
   button(540, 600, 240, 56, 'START', () => {

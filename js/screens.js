@@ -24,7 +24,7 @@ function drawHero() {
   text(done ? 'YOUR HERO' : 'CREATE YOUR HERO', 40, 60, 40, '#fff');
   if (done) button(1130, 12, 120, 46, 'HOME', () => { saveGame(); scene = 'hub'; Snd.play('ui'); }, false, 22);
   panel(40, 90, 440, 590, '#80f0ff');
-  const s = Art.hero(hs, Math.floor(time * 1.5) % 2); ctx.imageSmoothingEnabled = false;
+  const s = Art.heroFront(hs, Math.floor(time * 1.5) % 2); ctx.imageSmoothingEnabled = true;
   ctx.drawImage(s, 260 - s.lw * 5, 110, s.lw * 10, s.lh * 10);
   const nm = hs.name + (heroTyping && Math.floor(time * 3) % 2 ? '_' : '');
   text(nm.toUpperCase(), 260, 536, 40, '#fff', 'center');

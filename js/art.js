@@ -317,5 +317,17 @@ const Art = (function () {
   function hub() { return hubBg || (hubBg = bakeHub()); }
   const icoCache = {};
   function sprite(name, f) { const l = S[name]; return l[(f || 0) % l.length]; }
-  return { mk, tint, outline, sprite, arena, hub, drawEarth, hero, S };
+  // ===== the smooth 64x64 character sprites (sprites64.js) replace the old blocky robots in the world; the old front-view robots stay as UI icons =====
+  const OLD = {};
+  const NEW64 = { bulwark: ['bulwark', 44], sight: ['sight', 44], mender: ['mender', 44], ember: ['ember', 44], frost: ['frost', 44], arc: ['arc', 44], blade: ['blade', 44], scrap: ['scrapper', 44],
+    raider: ['raider', 44], gunner: ['gunner', 44], drone: ['drone', 40], worm: ['worm', 44], brute: ['brute', 50], boss: ['claw', 74], walker: ['walker', 76], warden: ['warden', 70] };
+  Object.keys(NEW64).forEach(n => {
+    OLD[n] = S[n]; const nm = NEW64[n][0], sz = NEW64[n][1];
+    S[n] = [0, 1].map(fr => { const o = mk(64, 64); o.getContext('2d').drawImage(Sprites64.get(nm, fr), 0, 0); o.lw = o.lh = sz; o.ui = sz > 60 ? 0.6 : 0.95; return o; });
+  });
+  function icon(name, f) { const l = OLD[name] || S[name]; return l[(f || 0) % l.length]; }
+  function hero64(o, f) { const c = Sprites64.get('hero', f || 0, o); c.lw = c.lh = 44; c.ui = 0.95; return c; }
+  const hfCache = {};
+  function heroFront(o, f) { const k = [o.hat, o.coat, o.skin, o.hair, o.mark, o.origin, f || 0].join('|'); if (!hfCache[k]) { const c = Sprites64.getHi('hero_front', f || 0, o, 5); c.lw = c.lh = 40; hfCache[k] = c; } return hfCache[k]; }
+  return { mk, tint, outline, sprite, icon, arena, hub, drawEarth, hero: hero64, heroFront, heroOld: hero, S };
 })();
