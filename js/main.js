@@ -2,8 +2,8 @@
 // ---------- canvas, ui helpers, battle HUD, input, main loop ----------
 const W = 1280, H = 720;
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
-const lo = document.createElement('canvas'); lo.width = VW; lo.height = VH;
-const lx = lo.getContext('2d'); lx.imageSmoothingEnabled = false;
+const lo = document.createElement('canvas'); lo.width = VW * 2; lo.height = VH * 2;   // 2x pixel layer (logical coords stay 320x180; sprites are drawn at double detail)
+const lx = lo.getContext('2d'); lx.scale(2, 2); lx.imageSmoothingEnabled = false;
 const FONT = '"Pixelify Sans", "Courier New", monospace';
 try { document.fonts.load('24px "Pixelify Sans"'); } catch (e) {}
 let scene = 'title', time = 0, mxF = 640, myF = 360, uiB = [];

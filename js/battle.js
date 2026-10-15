@@ -313,11 +313,11 @@ function battlePointer(kind, x, y) {   // x,y in arena (low-res) coordinates
 
 // ---------- drawing (pixel layer) ----------
 function sprAt(g, name, f, x, y, alpha, flash, flip) {
-  const s = Art.sprite(name, f), px = Math.round(x - s.width / 2), py = Math.round(y - s.height + 6);
+  const s = Art.sprite(name, f), px = Math.round(x - s.lw / 2), py = Math.round(y - s.lh + 6);
   if (alpha < 1) g.globalAlpha = alpha;
-  if (flip) { g.save(); g.translate(px + s.width, py); g.scale(-1, 1); g.drawImage(s, 0, 0); if (flash > 0) g.drawImage(flashOf(s), 0, 0); g.restore(); }
-  else { g.drawImage(s, px, py); if (flash > 0) g.drawImage(flashOf(s), px, py); }
-  g.globalAlpha = 1; return { px, py, w: s.width, h: s.height };
+  if (flip) { g.save(); g.translate(px + s.lw, py); g.scale(-1, 1); g.drawImage(s, 0, 0, s.lw, s.lh); if (flash > 0) g.drawImage(flashOf(s), 0, 0, s.lw, s.lh); g.restore(); }
+  else { g.drawImage(s, px, py, s.lw, s.lh); if (flash > 0) g.drawImage(flashOf(s), px, py, s.lw, s.lh); }
+  g.globalAlpha = 1; return { px, py, w: s.lw, h: s.lh };
 }
 const _fc = new Map();
 function flashOf(s) { let t = _fc.get(s); if (!t) { t = Art.tint(s, 'rgba(255,255,255,0.85)'); _fc.set(s, t); } return t; }

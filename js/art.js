@@ -12,69 +12,118 @@ const Art = (function () {
     g.drawImage(c, 1, 1); return o;
   }
   const S = {};
+  // ---- double-resolution sprites (k = 2): 48x72 px for a 24x36 logical cell; .lw/.lh hold the logical size ----
+  function detail(c) {      // rim light on top/left edges and shade on bottom/right edges of the silhouette
+    const g = c.getContext('2d'), w = c.width, h = c.height, id = g.getImageData(0, 0, w, h), d = id.data, o = new Uint8ClampedArray(d);
+    const A = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? 0 : o[(y * w + x) * 4 + 3];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4; if (o[i + 3] < 128) continue;
+      let dl = 0; if (!A(x, y - 1)) dl += 34; if (!A(x - 1, y)) dl += 16; if (!A(x, y + 1)) dl -= 40; if (!A(x + 1, y)) dl -= 20;
+      if (dl) { d[i] += dl; d[i + 1] += dl; d[i + 2] += dl; }
+    }
+    g.putImageData(id, 0, 0); return c;
+  }
+  function finish(c) {
+    detail(c);
+    const o = mk(c.width + 4, c.height + 4), g = o.getContext('2d'), d = tint(c, '#0a0610');
+    [[1, 1], [2, 1], [3, 1], [1, 2], [3, 2], [1, 3], [2, 3], [3, 3]].forEach(p => g.drawImage(d, p[0], p[1]));
+    g.drawImage(c, 2, 2); o.lw = o.width / 2; o.lh = o.height / 2; return o;
+  }
+  function build2(name, fn, frames) {
+    const list = [];
+    for (let f = 0; f < (frames || 1); f++) {
+      const c = mk(48, 72), g = c.getContext('2d');
+      const R = (col, x, y, ww, hh) => { g.fillStyle = col; g.fillRect(x, y, ww, hh); };
+      fn(R, f); list.push(finish(c));
+    }
+    S[name] = list;
+  }
   function build(name, w, h, fn, frames) {
     const list = [];
     for (let f = 0; f < (frames || 1); f++) {
       const c = mk(w, h), g = c.getContext('2d');
       const R = (col, x, y, ww, hh) => { g.fillStyle = col; g.fillRect(x, y, ww, hh); };
-      fn(R, f, g); list.push(outline(c));
+      fn(R, f, g); const oc = outline(c); oc.lw = oc.width; oc.lh = oc.height; list.push(oc);
     }
     S[name] = list;
   }
 
-  // ===== STEAMBOT FAMILY (SteamWorld Heist look): round heads with lens eyes, riveted plates, gauges, pipes =====
+  // ===== STEAMBOT FAMILY (SteamWorld Heist look), drawn at DOUBLE resolution (48x72 px per 24x36 logical cell) =====
   function bot(R0, f, o) {
-    const Y = 8, b = f ? 1 : 0;
+    const Y = 16, b = f ? 2 : 0;
     const R = (c, x, y, w, h) => R0(c, x, y + Y, w, h);
+    const S2 = (c, x, y, w, h) => R(c, x * 2, y * 2, w * 2, h * 2);    // old 24x36 coordinates (used by the per-bot extras)
     const c = o.body, t = o.trim, d = o.dark, hd = o.head || c, L = o.light || '#ffffff55', e = o.eye;
-    R(d, 8, 22, 3, 5 - b); R(d, 13, 22, 3, 4 + b);              // legs (pipes)
-    R(t, 7, 26 - b, 5, 2); R(t, 12, 25 + b, 5, 2);               // boots
-    R(c, 6, 12 + b, 12, 10); R(L, 6, 12 + b, 12, 2); R(d, 6, 20 + b, 12, 2); R(t, 6, 17 + b, 12, 1);   // torso
-    [[7, 14], [16, 14], [7, 19], [16, 19]].forEach(p => R('#fff8d0', p[0], p[1] + b, 1, 1));            // rivets
-    if (!o.nogauge) { R(d, 10, 14 + b, 4, 3); R(o.gauge || '#ffe090', 11, 15 + b, 2, 1); }
-    const sw = o.wide ? 2 : 0;
-    R(t, 3 - sw, 11 + b, 4 + sw, 4); R(t, 17, 11 + b, 4 + sw, 4);                                       // shoulder pads
-    R(d, 3, 15 + b, 3, 6); R(d, 18, 15 + b, 3, 6); R(t, 3, 20 + b, 3, 2); R(t, 18, 20 + b, 3, 2);        // arms + hands
-    R(d, 10, 10 + b, 4, 2);                                                                               // neck
-    R(hd, 7, 1 + b, 10, 1); R(hd, 6, 2 + b, 12, 8); R(hd, 7, 10 + b, 10, 1); R(L, 7, 2 + b, 10, 1); R(d, 6, 9 + b, 12, 1); // head
-    R(t, 5, 5 + b, 1, 3); R(t, 18, 5 + b, 1, 3);                                                          // ear bolts
-    if (o.cyclops) { R('#0a0a12', 8, 4 + b, 8, 5); R(e, 9, 5 + b, 6, 3); R('#ffffff', 9, 5 + b, 2, 1); }
-    else if (o.slit) { R('#0a0a12', 7, 5 + b, 10, 3); R(e, 8, 6 + b, 8, 1); }
-    else { R('#0a0a12', 7, 4 + b, 4, 5); R('#0a0a12', 13, 4 + b, 4, 5); R(e, 8, 5 + b, 2, 3); R(e, 14, 5 + b, 2, 3); R('#ffffff', 8, 5 + b, 1, 1); R('#ffffff', 14, 5 + b, 1, 1); }
-    const hc = o.hatc || t, hb = o.hatb || '#e0a030';
-    if (o.hat === 'floppy') { R(hc, 2, 2 + b, 20, 2); R(hc, 6, -3 + b, 12, 6); R(hb, 6, 0 + b, 12, 1); }
-    else if (o.hat === 'tophat') { R(hc, 5, 1 + b, 14, 1); R(hc, 7, -5 + b, 10, 6); R(hb, 7, -1 + b, 10, 1); }
-    else if (o.hat === 'coil') { R(hc, 5, 1 + b, 14, 1); R(hc, 7, -4 + b, 10, 5); R(hb, 7, -1 + b, 10, 1); R('#9a9aa4', 11, -7 + b, 2, 3); R(f ? '#80f0ff' : '#ffffff', 10, -8 + b, 4, 1); }
-    else if (o.hat === 'medic') { R('#ffffff', 6, -1 + b, 12, 3); R('#e04040', 11, -1 + b, 2, 3); R('#e04040', 10, 0 + b, 4, 1); }
-    else if (o.hat === 'mask') { R('#444450', 6, -2 + b, 12, 5); R('#ffa030', 7, 0 + b, 10, 1); }
-    else if (o.hat === 'goggles') { R('#305070', 6, 1 + b, 12, 2); R('#80e0ff', 7, 0 + b, 4, 3); R('#80e0ff', 13, 0 + b, 4, 3); }
-    else if (o.hat === 'helm') { R(hc, 6, -2 + b, 12, 5); R(hc, 7, -3 + b, 10, 1); R(hb, 11, -3 + b, 2, 6); }
-    else if (o.hat === 'cap') { R(hc, 6, -1 + b, 12, 3); R(d, 5, 2 + b, 14, 1); R('#ffd040', 11, 0 + b, 2, 2); }
-    else if (o.hat === 'mohawk') { R('#d03030', 10, -3 + b, 4, 5); R('#a02020', 11, -5 + b, 2, 2); }
-    if (o.extra) o.extra(R, f, b);
+    const cl = shade(c, 38), cd = shade(c, -30), tl = shade(t, 40), td = shade(t, -35), dd = shade(d, -25), hl = shade(hd, 40), hk = shade(hd, -35);
+    const gc = o.gauge || '#ffe090';
+    // legs (pipes with knee rings) and boots
+    R(d, 16, 44, 6, 10 - b); R(dd, 20, 44, 2, 10 - b); R(t, 15, 47, 8, 2); R(tl, 15, 47, 8, 1);
+    R(d, 26, 44, 6, 8 + b); R(dd, 30, 44, 2, 8 + b); R(t, 25, 47, 8, 2); R(tl, 25, 47, 8, 1);
+    R(t, 14, 52 - b, 10, 4); R(tl, 14, 52 - b, 10, 1); R(td, 14, 55 - b, 10, 1); R(td, 14, 54 - b, 2, 1);
+    R(t, 24, 50 + b, 10, 4); R(tl, 24, 50 + b, 10, 1); R(td, 24, 53 + b, 10, 1); R(td, 24, 52 + b, 2, 1);
+    // torso: plated body, inset chest panel, trim band, vents, rivets
+    R(c, 12, 24 + b, 24, 20); R(L, 12, 24 + b, 24, 2); R(cl, 12, 26 + b, 2, 14); R(cd, 34, 26 + b, 2, 14);
+    R(d, 12, 40 + b, 24, 4); R(dd, 12, 43 + b, 24, 1);
+    R(cd, 14, 26 + b, 20, 8); R(c, 15, 27 + b, 18, 6); R(cl, 15, 27 + b, 18, 1); R(cd, 15, 32 + b, 18, 1);
+    R(t, 12, 34 + b, 24, 2); R(tl, 12, 34 + b, 24, 1); R(td, 12, 35 + b, 24, 1);
+    R(cd, 23, 36 + b, 2, 4); R(dd, 15, 37 + b, 5, 1); R(dd, 15, 39 + b, 5, 1); R(dd, 28, 37 + b, 5, 1); R(dd, 28, 39 + b, 5, 1);
+    [[13, 25], [33, 25], [13, 41], [33, 41]].forEach(p => { R('#fff8d0', p[0], p[1] + b, 2, 2); R('#ffffff', p[0], p[1] + b, 1, 1); R('#8a7a50', p[0] + 1, p[1] + 1 + b, 1, 1); });
+    if (!o.nogauge) { R(d, 19, 28 + b, 10, 5); R('#0a0a12', 20, 29 + b, 8, 3); R(shade(gc, -70), 21, 30 + b, 6, 1); R(gc, 21, 30 + b, 4, 1); R('#ffffff', 24, 29 + b, 1, 3); R(gc, 20, 29 + b, 1, 1); }
+    // shoulder pads, arms, hands
+    const sw = o.wide ? 4 : 0;
+    R(t, 6 - sw, 22 + b, 8 + sw, 8); R(tl, 6 - sw, 22 + b, 8 + sw, 2); R(td, 6 - sw, 29 + b, 8 + sw, 1); R(tl, 8 - sw, 25 + b, 2, 2);
+    R(t, 34, 22 + b, 8 + sw, 8); R(tl, 34, 22 + b, 8 + sw, 2); R(td, 34, 29 + b, 8 + sw, 1); R(tl, 36, 25 + b, 2, 2);
+    R(d, 6, 30 + b, 6, 12); R(dd, 10, 30 + b, 2, 12); R(t, 6, 35 + b, 6, 2); R(tl, 6, 35 + b, 6, 1); R(t, 6, 40 + b, 6, 4); R(tl, 6, 40 + b, 6, 1); R(td, 8, 43 + b, 1, 1); R(td, 10, 43 + b, 1, 1);
+    R(d, 36, 30 + b, 6, 12); R(dd, 40, 30 + b, 2, 12); R(t, 36, 35 + b, 6, 2); R(tl, 36, 35 + b, 6, 1); R(t, 36, 40 + b, 6, 4); R(tl, 36, 40 + b, 6, 1); R(td, 38, 43 + b, 1, 1); R(td, 40, 43 + b, 1, 1);
+    // neck and head
+    R(d, 20, 20 + b, 8, 4); R(t, 20, 21 + b, 8, 1); R(dd, 20, 23 + b, 8, 1);
+    R(hd, 14, 2 + b, 20, 2); R(hd, 12, 4 + b, 24, 16); R(hd, 14, 20 + b, 20, 2);
+    R(hl, 14, 2 + b, 20, 1); R(L, 14, 4 + b, 20, 2); R(hl, 12, 6 + b, 2, 10); R(hk, 34, 6 + b, 2, 10); R(hk, 12, 18 + b, 24, 2); R(hk, 14, 20 + b, 20, 2); R(d, 14, 21 + b, 20, 1);
+    R(t, 9, 10 + b, 3, 6); R(tl, 9, 10 + b, 3, 1); R(td, 9, 15 + b, 3, 1); R(d, 10, 12 + b, 1, 2);
+    R(t, 36, 10 + b, 3, 6); R(tl, 36, 10 + b, 3, 1); R(td, 36, 15 + b, 3, 1); R(d, 37, 12 + b, 1, 2);
+    if (o.cyclops) {
+      R('#0a0a12', 16, 8 + b, 16, 10); R(shade(e, -80), 17, 9 + b, 14, 8); R(e, 18, 10 + b, 12, 6); R(shade(e, 70), 18, 10 + b, 12, 2);
+      R('#ffffff', 19, 10 + b, 4, 2); R('#0a0a12', 23, 12 + b, 3, 3); R(shade(e, -55), 18, 15 + b, 12, 1);
+    } else if (o.slit) {
+      R('#0a0a12', 14, 10 + b, 20, 6); R(shade(e, -60), 15, 11 + b, 18, 4); R(e, 16, 12 + b, 16, 2); R(shade(e, 80), 16, 12 + b, 16, 1); R('#ffffff', 16, 12 + b, 3, 1);
+    } else {
+      [14, 26].forEach(x => { R('#0a0a12', x, 8 + b, 8, 10); R(shade(e, -80), x + 1, 9 + b, 6, 8); R(e, x + 2, 10 + b, 4, 6); R(shade(e, 70), x + 2, 10 + b, 4, 2); R('#ffffff', x + 2, 10 + b, 2, 2); R(shade(e, -55), x + 2, 15 + b, 4, 1); });
+    }
+    R(dd, 21, 19 + b, 6, 1); R(hl, 22, 19 + b, 1, 1); R(hl, 24, 19 + b, 1, 1);
+    // hats
+    const hc = o.hatc || t, hb = o.hatb || '#e0a030', hcl = shade(hc, 35), hcd = shade(hc, -35);
+    if (o.hat === 'floppy') { R(hc, 4, 4 + b, 40, 4); R(hcl, 4, 4 + b, 40, 1); R(hcd, 4, 7 + b, 40, 1); R(hc, 12, -6 + b, 24, 12); R(hcl, 12, -6 + b, 24, 2); R(hcd, 32, -4 + b, 4, 10); R(hb, 12, 0 + b, 24, 2); R(shade(hb, 40), 12, 0 + b, 24, 1); R(hcd, 22, -6 + b, 4, 3); }
+    else if (o.hat === 'tophat') { R(hc, 10, 2 + b, 28, 2); R(hc, 14, -10 + b, 20, 12); R(hcl, 14, -10 + b, 20, 2); R(hcd, 30, -8 + b, 4, 10); R(hb, 14, -2 + b, 20, 2); }
+    else if (o.hat === 'coil') { R(hc, 10, 2 + b, 28, 2); R(hcl, 10, 2 + b, 28, 1); R(hc, 14, -8 + b, 20, 10); R(hcl, 14, -8 + b, 20, 2); R(hcd, 30, -6 + b, 4, 8); R(hb, 14, -2 + b, 20, 2); R('#9a9aa4', 22, -14 + b, 4, 6); R('#c8c8d0', 22, -14 + b, 1, 6); R(f ? '#80f0ff' : '#ffffff', 20, -16 + b, 8, 2); }
+    else if (o.hat === 'medic') { R('#ffffff', 12, -2 + b, 24, 6); R('#c8d8d0', 12, 3 + b, 24, 1); R('#e04040', 22, -2 + b, 4, 6); R('#e04040', 20, 0 + b, 8, 2); R('#ff8080', 22, -2 + b, 1, 2); }
+    else if (o.hat === 'mask') { R('#444450', 12, -4 + b, 24, 10); R('#5a5a68', 12, -4 + b, 24, 2); R('#2a2a34', 12, 4 + b, 24, 2); R('#ffa030', 14, 0 + b, 20, 2); R('#ffd080', 14, 0 + b, 20, 1); R('#2a2a34', 20, 3 + b, 1, 2); R('#2a2a34', 24, 3 + b, 1, 2); R('#2a2a34', 28, 3 + b, 1, 2); }
+    else if (o.hat === 'goggles') { R('#305070', 12, 2 + b, 24, 4); R('#4a7090', 12, 2 + b, 24, 1); [13, 25].forEach(x => { R('#1a2a3a', x, -1 + b, 10, 8); R('#80e0ff', x + 1, 0 + b, 8, 6); R('#c8f4ff', x + 1, 0 + b, 8, 2); R('#ffffff', x + 1, 0 + b, 2, 2); }); }
+    else if (o.hat === 'helm') { R(hc, 12, -4 + b, 24, 10); R(hc, 14, -6 + b, 20, 2); R(hcl, 14, -6 + b, 20, 1); R(hcl, 12, -4 + b, 2, 10); R(hcd, 34, -4 + b, 2, 10); R(hcd, 12, 5 + b, 24, 1); R(hb, 22, -6 + b, 4, 12); R(shade(hb, 45), 22, -6 + b, 1, 12); }
+    else if (o.hat === 'cap') { R(hc, 12, -2 + b, 24, 6); R(hcl, 12, -2 + b, 24, 2); R(d, 10, 4 + b, 28, 2); R(hcd, 12, 3 + b, 24, 1); R('#ffd040', 22, 0 + b, 4, 4); R('#fff0a0', 22, 0 + b, 2, 2); }
+    else if (o.hat === 'mohawk') { R('#d03030', 20, -6 + b, 8, 10); R('#a02020', 22, -10 + b, 4, 4); R('#ff6060', 20, -6 + b, 2, 8); R('#d03030', 18, -2 + b, 2, 4); R('#d03030', 28, -2 + b, 2, 4); }
+    if (o.extra) o.extra(S2, f, f ? 1 : 0);
   }
-  const BH = 36;
-  build('bulwark', 24, BH, (R, f, g) => bot(R, f, { body: '#5a6e8a', trim: '#3a4a68', dark: '#2a3248', light: '#ffffff44', eye: '#ffd040', hat: 'helm', hatc: '#3a4a68', hatb: '#ffd040', wide: true,
+  build2('bulwark', (R, f) => bot(R, f, { body: '#5a6e8a', trim: '#3a4a68', dark: '#2a3248', light: '#ffffff44', eye: '#ffd040', hat: 'helm', hatc: '#3a4a68', hatb: '#ffd040', wide: true,
     extra: (R, f, b) => { R('#4a6a9a', 0, 10 + b, 6, 18); R('#a8c8f0', 1, 11 + b, 4, 16); R('#e8f4ff', 1, 11 + b, 4, 2); R('#2a3248', 2, 17 + b, 2, 4); R('#fff8d0', 1, 24 + b, 1, 1); } }), 2);
-  build('sight', 24, BH, (R, f, g) => bot(R, f, { body: '#8a5a3a', trim: '#d8a040', dark: '#4a2e1a', head: '#8e98ac', eye: '#40f0e0', cyclops: true, hat: 'floppy', hatc: '#7a4a2a', hatb: '#e0a030', gauge: '#40f0e0',
+  build2('sight', (R, f) => bot(R, f, { body: '#8a5a3a', trim: '#d8a040', dark: '#4a2e1a', head: '#8e98ac', eye: '#40f0e0', cyclops: true, hat: 'floppy', hatc: '#7a4a2a', hatb: '#e0a030', gauge: '#40f0e0',
     extra: (R, f, b) => { R('#2a2a38', 13, 17 + b, 11, 2); R('#6a6a78', 20, 16 + b, 4, 1); R('#40f0e0', 16, 15 + b, 4, 2); R('#4a2e1a', 12, 18 + b, 3, 3); } }), 2);
-  build('mender', 24, BH, (R, f, g) => bot(R, f, { body: '#e8f0e8', trim: '#40c070', dark: '#8aa898', eye: '#40ff90', hat: 'medic', nogauge: true,
+  build2('mender', (R, f) => bot(R, f, { body: '#e8f0e8', trim: '#40c070', dark: '#8aa898', eye: '#40ff90', hat: 'medic', nogauge: true,
     extra: (R, f, b) => { R('#e04040', 11, 13 + b, 2, 6); R('#e04040', 9, 15 + b, 6, 2); R('#40c070', 18, 19 + b, 6, 5); R('#ffffff', 20, 20 + b, 2, 3); R('#e04040', 20, 21 + b, 2, 1); } }), 2);
-  build('ember', 24, BH, (R, f, g) => bot(R, f, { body: '#c85a28', trim: '#e8a040', dark: '#5a2a1a', head: '#d8662c', eye: '#ffd040', hat: 'helm', hatc: '#8a3a1a', hatb: '#e8a040', gauge: '#ff4020',
+  build2('ember', (R, f) => bot(R, f, { body: '#c85a28', trim: '#e8a040', dark: '#5a2a1a', head: '#d8662c', eye: '#ffd040', hat: 'helm', hatc: '#8a3a1a', hatb: '#e8a040', gauge: '#ff4020',
     extra: (R, f, b) => { R('#8a3a1a', 0, 12 + b, 5, 10); R('#5a5a64', 1, 5 + b, 2, 8); R(f ? '#d8d8e0' : '#a8a8b4', 0, 2 + b + f, 4, 3); R('#444450', 19, 17 + b, 5, 3); R(f ? '#ffd040' : '#ff8a20', 23, 17 + b, 1, 3); } }), 2);
-  build('frost', 24, BH, (R, f, g) => bot(R, f, { body: '#7ac0d8', trim: '#e8fcff', dark: '#3a6a88', head: '#a0e0f0', eye: '#3a9ae8', hat: 'goggles', light: '#ffffff88', gauge: '#80e8ff',
+  build2('frost', (R, f) => bot(R, f, { body: '#7ac0d8', trim: '#e8fcff', dark: '#3a6a88', head: '#a0e0f0', eye: '#3a9ae8', hat: 'goggles', light: '#ffffff88', gauge: '#80e8ff',
     extra: (R, f, b) => { R('#e8fcff', 2, 6 + b, 2, 6); R('#a0e8f8', 20, 5 + b, 2, 7); R('#5a3a2a', 21, 8 + b, 1, 18); R('#8af0ff', 20, 4 + b, 3, 4); R('#ffffff', 21, 5 + b, 1, 2); } }), 2);
-  build('arc', 24, BH, (R, f, g) => bot(R, f, { body: '#d8b020', trim: '#8a6a10', dark: '#5a4408', head: '#e8c82a', eye: '#80f0ff', hat: 'coil', hatc: '#3a3a40', hatb: '#e8c82a', nogauge: true,
+  build2('arc', (R, f) => bot(R, f, { body: '#d8b020', trim: '#8a6a10', dark: '#5a4408', head: '#e8c82a', eye: '#80f0ff', hat: 'coil', hatc: '#3a3a40', hatb: '#e8c82a', nogauge: true,
     extra: (R, f, b) => { R('#3a3a40', 11, 13 + b, 3, 2); R('#3a3a40', 10, 15 + b, 3, 2); R('#3a3a40', 11, 17 + b, 2, 2); R(f ? '#80f0ff' : '#ffffff', 0, 14 + b, 2, 2); R(f ? '#ffffff' : '#80f0ff', 22, 16 + b, 2, 2); } }), 2);
-  build('blade', 24, BH, (R, f, g) => bot(R, f, { body: '#5a3a78', trim: '#8a5ab0', dark: '#2a1a3a', head: '#3a2a50', eye: '#ff3030', slit: true, hat: 'mohawk', gauge: '#ff3030',
+  build2('blade', (R, f) => bot(R, f, { body: '#5a3a78', trim: '#8a5ab0', dark: '#2a1a3a', head: '#3a2a50', eye: '#ff3030', slit: true, hat: 'mohawk', gauge: '#ff3030',
     extra: (R, f, b) => { R('#d03030', 5, 10 + b, 14, 2); R('#d03030', 17 + f, 12 + b, 5, 2); R('#d0d8e8', 0, 6 + b, 2, 16); R('#ffffff', 0, 6 + b, 1, 8); R('#d0d8e8', 22, 6 + b, 2, 16); R('#ffffff', 23, 6 + b, 1, 8); } }), 2);
-  build('scrap', 24, BH, (R, f, g) => bot(R, f, { body: '#5a9a4a', trim: '#e8a030', dark: '#2a4a24', head: '#7a8a60', eye: '#ffa030', hat: 'mask', gauge: '#ffa030',
+  build2('scrap', (R, f) => bot(R, f, { body: '#5a9a4a', trim: '#e8a030', dark: '#2a4a24', head: '#7a8a60', eye: '#ffa030', hat: 'mask', gauge: '#ffa030',
     extra: (R, f, b) => { R('#6a6a78', 0, 12 + b, 5, 10); R('#3a3a40', 1, 10 + b, 3, 2); R(f ? '#e8f0f8' : '#c8d8e8', 0, 6 + b - f, 3, 3); R('#ffd040', 19, 18 + b, 5, 1); R('#9a9aa4', 21, 16 + b, 2, 5); R('#c0c0c8', 18, 0 + b, 5, 3); R('#ff4040', 20, 1 + b, 1, 1); } }), 2);
 
   // ===== ENEMIES: rusty scrag bots and royal guard bots =====
-  build('raider', 24, BH, (R, f, g) => bot(R, f, { body: '#7a4a2a', trim: '#4a2a1a', dark: '#2a1a10', head: '#8a5a3a', eye: '#ff4040', light: '#ffffff22', hat: 'cap', hatc: '#a02a2a',
+  build2('raider', (R, f) => bot(R, f, { body: '#7a4a2a', trim: '#4a2a1a', dark: '#2a1a10', head: '#8a5a3a', eye: '#ff4040', light: '#ffffff22', hat: 'cap', hatc: '#a02a2a',
     extra: (R, f, b) => { R('#a02a2a', 6, 11 + b, 12, 2); R('#8a8a94', 20, 9 + b, 2, 12); R('#c8c8d0', 20, 9 + b, 2, 2); } }), 2);
-  build('gunner', 24, BH, (R, f, g) => bot(R, f, { body: '#2a4a8a', trim: '#e8e8f0', dark: '#1a2a50', head: '#3a5aa0', eye: '#ff4040', hat: 'helm', hatc: '#e8e8f0', hatb: '#e04040',
+  build2('gunner', (R, f) => bot(R, f, { body: '#2a4a8a', trim: '#e8e8f0', dark: '#1a2a50', head: '#3a5aa0', eye: '#ff4040', hat: 'helm', hatc: '#e8e8f0', hatb: '#e04040',
     extra: (R, f, b) => { R('#2a2a38', 15, 17 + b, 9, 2); R('#6a6a78', 21, 16 + b, 3, 1); R('#ffd040', 7, 14 + b, 2, 1); } }), 2);
 
   build('drone', 20, 16, (R, f) => {
@@ -207,36 +256,62 @@ const Art = (function () {
     for (let i = 0; i < 70; i++) R(r() > 0.5 ? '#46342a' : '#32241c', r() * 320 | 0, 133 + (r() * 46 | 0), 3, 1);
     return c;
   }
-  // ===== the customizable hero: a human in a long coat (24x36, same layout as the robots) =====
+  // ===== the customizable hero: a HALF-CYBORG in a long coat (48x72 px, drawn at double resolution like the robots) =====
   function shade(hex, d) { const n = parseInt(hex.slice(1), 16); return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => Math.max(0, Math.min(255, v + d)).toString(16).padStart(2, '0')).join(''); }
   const heroCache = {};
   function hero(o, f) {
     f = f || 0; const key = [o.hat, o.coat, o.skin, o.hair, o.mark, o.origin, f].join('|');
     if (heroCache[key]) return heroCache[key];
-    const c = mk(24, 36), g = c.getContext('2d'), b = f ? 1 : 0;
-    const R = (col, x, y, w, h) => { g.fillStyle = col; g.fillRect(x, y + 8, w, h); };
+    const c = mk(48, 72), g = c.getContext('2d'), b = f ? 2 : 0;
+    const R = (col, x, y, w, h) => { g.fillStyle = col; g.fillRect(x, y + 16, w, h); };
+    const S2 = (col, x, y, w, h) => R(col, x * 2, y * 2, w * 2, h * 2);     // old 24x36 coordinates for hats and origin props
     const co = HERO_COATS[o.coat], sk = HERO_SKINS[o.skin], hr = HERO_HAIRS[o.hair], mk2 = HERO_MARKS[o.mark];
-    const dk = shade(co, -45), lt = shade(co, 35), sd = shade(sk, -45);
-    R('#33405e', 8, 22, 3, 5 - b); R('#33405e', 13, 22, 3, 4 + b);                       // legs
-    R('#2a1a10', 7, 26 - b, 5, 2); R('#2a1a10', 12, 25 + b, 5, 2);                         // boots
-    R(co, 7, 12 + b, 10, 11); R(lt, 7, 12 + b, 10, 1); R(dk, 7, 22 + b, 10, 1); R(dk, 12, 13 + b, 1, 9);   // coat
-    R('#2a1a10', 7, 17 + b, 10, 2); R('#e0c050', 11, 17 + b, 2, 2);                        // belt
-    R(co, 4, 12 + b, 3, 8); R(co, 17, 12 + b, 3, 8); R(dk, 4, 19 + b, 3, 1); R(dk, 17, 19 + b, 3, 1);       // arms
-    R(sk, 4, 20 + b, 3, 2); R(sk, 17, 20 + b, 3, 2); R(mk2, 18, 21 + b, 1, 1);             // hands, Seal on the right
-    if (o.origin === 'guard') { R('#ffd040', 14, 14 + b, 2, 2); R('#fff0a0', 14, 14 + b, 1, 1); }
-    if (o.origin === 'smuggler') { R('#b02a2a', 8, 10 + b, 8, 2); R('#b02a2a', 15, 11 + b, 2, 3); }
-    if (o.origin === 'courier') { R('#6a4a2a', 8, 12 + b, 2, 1); R('#6a4a2a', 9, 13 + b, 2, 1); R('#6a4a2a', 10, 14 + b, 2, 1); R('#6a4a2a', 11, 15 + b, 2, 1); R('#8a6a3a', 15, 19 + b, 5, 5); R('#6a4a2a', 15, 19 + b, 5, 1); }
-    R(sd, 11, 10 + b, 2, 2);                                                                // neck
-    R(sk, 8, 2 + b, 8, 8); R(sk, 7, 4 + b, 1, 3); R(sk, 16, 4 + b, 1, 3);                  // head and ears
-    R(hr, 8, 2 + b, 8, 2); R(hr, 7, 3 + b, 1, 2); R(hr, 16, 3 + b, 1, 2);                  // hair
-    R('#1a1a22', 10, 6 + b, 1, 2); R('#1a1a22', 13, 6 + b, 1, 2); R(sd, 11, 9 + b, 2, 1);  // eyes, mouth
-    if (o.origin === 'tech') { R('#305070', 8, 5 + b, 8, 3); R('#80e0ff', 9, 5 + b, 2, 2); R('#80e0ff', 13, 5 + b, 2, 2); }
-    if (o.hat === 0) { R('#6a4a2a', 4, 2 + b, 16, 2); R('#7a5a38', 7, -3 + b, 10, 6); R('#2a1a10', 7, 0 + b, 10, 1); }
-    else if (o.hat === 1) { R('#4a4a52', 7, -1 + b, 10, 4); R('#3a3a42', 6, 2 + b, 14, 1); R('#5a5a64', 7, -1 + b, 10, 1); }
-    else if (o.hat === 2) { R(co, 6, -1 + b, 12, 4); R(dk, 6, 3 + b, 2, 6); R(dk, 16, 3 + b, 2, 6); R(lt, 6, -1 + b, 12, 1); }
-    else { R('#b02a2a', 8, 2 + b, 8, 2); R('#8a1a1a', 8, 3 + b, 8, 1); R('#b02a2a', 16, 3 + b, 3, 2); }
-    R(mk2, 8, 5 + b, 1, 3); if (f) R('#ffffff', 8, 5 + b, 1, 1);                           // Seal glow at the temple
-    return (heroCache[key] = outline(c));
+    const dk = shade(co, -45), lt = shade(co, 35), sd = shade(sk, -45), sl = shade(sk, 22);
+    const M = '#8a94a2', Ml = '#c8d0dc', Md = '#4a525e', Mdd = '#2a3038', GL = '#40f0e0';
+    // legs: human left, mechanical right
+    R('#33405e', 16, 44, 6, 10 - b); R('#4a5a80', 16, 44, 1, 10 - b); R('#242e48', 21, 44, 1, 10 - b); R('#242e48', 16, 49, 6, 1);
+    R(Md, 26, 44, 6, 8 + b); R(M, 26, 44, 2, 8 + b); R(Mdd, 31, 44, 1, 8 + b); R(Mdd, 25, 47, 8, 2); R(Ml, 27, 46, 4, 1); R(GL, 29, 49, 1, 2);
+    R('#2a1a10', 14, 52 - b, 10, 4); R('#4a3020', 14, 52 - b, 10, 1); R('#120a06', 14, 55 - b, 10, 1);
+    R(Mdd, 24, 50 + b, 10, 4); R(Md, 24, 50 + b, 10, 1); R(GL, 31, 52 + b, 2, 1); R('#120a10', 24, 53 + b, 10, 1);
+    // long coat
+    R(co, 14, 24 + b, 20, 22); R(lt, 14, 24 + b, 20, 2); R(lt, 14, 26 + b, 2, 18); R(dk, 32, 26 + b, 2, 18); R(dk, 14, 44 + b, 20, 2); R(dk, 24, 26 + b, 1, 18); R(dk, 23, 40 + b, 2, 6);
+    R(dk, 16, 38 + b, 5, 1); R(lt, 16, 37 + b, 5, 1); R(dk, 28, 38 + b, 4, 1);
+    R(dk, 16, 22 + b, 5, 3); R(lt, 16, 22 + b, 5, 1); R(dk, 27, 22 + b, 5, 3); R(lt, 27, 22 + b, 5, 1);
+    // cybernetic chest plate with a glowing core (the coat hangs open on the right)
+    R(Mdd, 25, 26 + b, 8, 8); R(Md, 26, 27 + b, 6, 6); R(M, 26, 27 + b, 6, 1); R('#0a1a22', 27, 29 + b, 4, 3); R(GL, 28, 30 + b, 2, 2); R('#e8fcff', 28, 30 + b, 1, 1); R(Ml, 26, 32 + b, 1, 1);
+    // belt
+    R('#2a1a10', 14, 34 + b, 20, 4); R('#4a3020', 14, 34 + b, 20, 1); R('#e0c050', 22, 34 + b, 4, 4); R('#fff0a0', 22, 34 + b, 2, 1); R('#8a6a20', 22, 37 + b, 4, 1);
+    // left arm: coat sleeve and a human hand
+    R(co, 8, 24 + b, 6, 14); R(lt, 8, 24 + b, 2, 14); R(dk, 12, 24 + b, 2, 14); R(dk, 8, 36 + b, 6, 2); R(lt, 8, 24 + b, 6, 1);
+    R(sk, 8, 38 + b, 6, 4); R(sl, 8, 38 + b, 6, 1); R(sd, 8, 41 + b, 6, 1); R(sd, 10, 41 + b, 1, 1); R(sd, 12, 41 + b, 1, 1);
+    // right arm: chrome prosthetic with joints
+    R(Md, 33, 24 + b, 8, 6); R(M, 33, 24 + b, 8, 2); R(Mdd, 33, 29 + b, 8, 1); R(GL, 36, 26 + b, 2, 2);
+    R(Md, 34, 30 + b, 6, 6); R(M, 34, 30 + b, 2, 6); R(Mdd, 34, 33 + b, 6, 1);
+    R(Mdd, 33, 35 + b, 8, 3); R(Ml, 34, 35 + b, 6, 1);
+    R(M, 34, 38 + b, 6, 4); R(Ml, 34, 38 + b, 2, 4); R(Mdd, 39, 38 + b, 1, 4);
+    R(Md, 34, 41 + b, 6, 4); R(Mdd, 36, 44 + b, 1, 1); R(Mdd, 38, 44 + b, 1, 1); R(mk2, 36, 42 + b, 2, 2); R('#ffffff', 36, 42 + b, 1, 1);
+    if (o.origin === 'guard') { R('#ffd040', 18, 28 + b, 4, 4); R('#fff0a0', 18, 28 + b, 2, 2); R('#8a6a10', 18, 31 + b, 4, 1); }
+    if (o.origin === 'smuggler') { S2('#b02a2a', 8, 10 + b / 2, 8, 2); S2('#b02a2a', 15, 11 + b / 2, 2, 3); R('#d85050', 16, 20 + b, 16, 1); }
+    if (o.origin === 'courier') { for (let i = 0; i < 4; i++) S2('#6a4a2a', 8 + i, 12 + i + b / 2, 2, 1); R('#6a4a2a', 20, 28 + b, 2, 2); R('#6a4a2a', 22, 30 + b, 2, 2); R('#6a4a2a', 24, 32 + b, 2, 2); S2('#8a6a3a', 15, 19 + b / 2, 5, 5); S2('#6a4a2a', 15, 19 + b / 2, 5, 1); R('#c8a050', 32, 40 + b, 2, 2); }
+    // neck, head: human on the left, machine on the right
+    R(sd, 22, 20 + b, 2, 4); R(Md, 24, 20 + b, 2, 4); R(Mdd, 22, 22 + b, 4, 1);
+    R(sk, 16, 4 + b, 8, 16); R(sl, 16, 4 + b, 2, 10); R(sd, 16, 18 + b, 8, 2); R(sd, 22, 12 + b, 2, 2);
+    R(M, 24, 4 + b, 8, 16); R(Ml, 24, 4 + b, 8, 1); R(Mdd, 24, 4 + b, 1, 16); R(Md, 24, 16 + b, 8, 4); R(Md, 25, 14 + b, 6, 1); R(Ml, 30, 6 + b, 1, 1); R(Ml, 30, 12 + b, 1, 1); R(Mdd, 31, 4 + b, 1, 16);
+    R(sk, 14, 8 + b, 2, 6); R(sd, 14, 12 + b, 2, 2);
+    R(Md, 32, 8 + b, 2, 6); R(Ml, 32, 8 + b, 2, 1); R(Mdd, 33, 4 + b, 1, 4); R('#ff4040', 33, 3 + b, 1, 1);
+    R(hr, 16, 4 + b, 16, 4); R(shade(hr, 30), 18, 4 + b, 6, 1); R(hr, 14, 6 + b, 2, 4); R(hr, 16, 8 + b, 2, 2);
+    R('#e8e0d8', 19, 12 + b, 3, 3); R('#1a1a22', 20, 12 + b, 2, 3); R('#ffffff', 19, 12 + b, 1, 1); R(sd, 19, 17 + b, 4, 1);
+    R('#0a0a12', 26, 11 + b, 5, 5); R('#ff3040', 27, 12 + b, 3, 3); R('#ffc0c0', 27, 12 + b, 1, 1); R('#ff3040', 24, 13 + b, 1, 1);
+    if (o.origin === 'tech') { S2('#305070', 8, 5 + b / 2, 8, 3); S2('#80e0ff', 9, 5 + b / 2, 2, 2); S2('#80e0ff', 13, 5 + b / 2, 2, 2); R('#ffffff', 18, 10 + b, 2, 2); }
+    // hats (old coordinates, doubled)
+    const bb = b / 2;
+    if (o.hat === 0) { S2('#6a4a2a', 4, 2 + bb, 16, 2); S2('#7a5a38', 7, -3 + bb, 10, 6); S2('#2a1a10', 7, 0 + bb, 10, 1); R('#8a6a44', 14, -6 + b, 20, 2); R('#4a3018', 8, 4 + b, 32, 1); }
+    else if (o.hat === 1) { S2('#4a4a52', 7, -1 + bb, 10, 4); S2('#3a3a42', 6, 2 + bb, 14, 1); S2('#5a5a64', 7, -1 + bb, 10, 1); R('#6a6a74', 16, -2 + b, 16, 1); }
+    else if (o.hat === 2) { S2(co, 6, -1 + bb, 12, 4); S2(dk, 6, 3 + bb, 2, 6); S2(dk, 16, 3 + bb, 2, 6); S2(lt, 6, -1 + bb, 12, 1); R(lt, 12, 0 + b, 2, 8); }
+    else { S2('#b02a2a', 8, 2 + bb, 8, 2); S2('#8a1a1a', 8, 3 + bb, 8, 1); S2('#b02a2a', 16, 3 + bb, 3, 2); R('#d85050', 16, 4 + b, 12, 1); }
+    // the Seal glows at the temple
+    R(mk2, 16, 10 + b, 2, 6); if (f) R('#ffffff', 16, 10 + b, 2, 2);
+    return (heroCache[key] = finish(c));
   }
   let hubBg = null;
   function hub() { return hubBg || (hubBg = bakeHub()); }
