@@ -30,9 +30,13 @@ const Snd = (function () {
       master = ac.createGain(); master.gain.value = 0.45; master.connect(ac.destination);
     } catch (e) { ac = null; }
   }
+  const noiseBufs = {};   // one fading noise buffer per duration instead of a new one for every shot
   function noise(dur, f0, f1, vol) {
-    const n = Math.floor(ac.sampleRate * dur), b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
-    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    let b = noiseBufs[dur];
+    if (!b) {
+      const n = Math.floor(ac.sampleRate * dur); b = noiseBufs[dur] = ac.createBuffer(1, n, ac.sampleRate); const d = b.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    }
     const s = ac.createBufferSource(); s.buffer = b;
     const f = ac.createBiquadFilter(); f.type = 'lowpass';
     f.frequency.setValueAtTime(f0, ac.currentTime); f.frequency.exponentialRampToValueAtTime(Math.max(40, f1), ac.currentTime + dur);

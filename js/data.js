@@ -34,24 +34,55 @@ const FOES = {
 
 // ---------- gear ----------
 const SETS = [
-  { id: 'scrap', name: 'SCRAP PLATE', b2: '+12% ATK', b3: '+15% HP' },
-  { id: 'rail', name: 'RAIL GEAR', b2: '+10% SPEED', b3: '+15% CRIT' },
-  { id: 'ring', name: 'ARK TECH', b2: '+25% ULT CHARGE', b3: '+20% ATK' }
+  { id: 'scrap', name: 'SCRAP PLATE', b2: '+12% ATK', b3: 'LAST STAND: -30% damage taken below 35% HP' },
+  { id: 'rail', name: 'RAIL GEAR', b2: '+10% SPEED', b3: 'SCAVENGER: every kill repairs 4% HP' },
+  { id: 'ring', name: 'ARK TECH', b2: '+25% ULT CHARGE', b3: 'COMBO CORE: each element combo gives +20% ult charge' }
 ];
+// enemy traits (a third entry in a wave list, see story.js)
+const TRAITS = {
+  shield: { name: 'SHIELDED', desc: 'Carries an energy shield. Shock breaks it fast.' },
+  regen: { name: 'REGEN', desc: 'Repairs itself. Burn or chill stops it.' },
+  volatile: { name: 'VOLATILE', desc: 'Explodes when destroyed and hurts everything close by.' }
+};
 const RAR = [{ n: 'COMMON', c: '#c8c8c8', m: 1 }, { n: 'FINE', c: '#6adf6a', m: 1.3 }, { n: 'RARE', c: '#5aa0ff', m: 1.7 }, { n: 'EPIC', c: '#c070ff', m: 2.2 }];
 const SLOT_MAIN = { weapon: 'atk', armor: 'hp', core: 'spd' };
 const MOD_N = { atk: 'ATK', hp: 'HP', spd: 'SPEED', crit: 'CRIT' };
+// A trait (fx) turns a piece from a number into a role. FINE and better pieces carry one; the role colors the tag on the icon.
+const GEAR_FX = {
+  siphon: { name: 'SIPHON', role: 'SURVIVE', col: '#6adf6a', desc: 'Every kill repairs this robot for 3% HP.' },
+  aegis: { name: 'AEGIS', role: 'SURVIVE', col: '#6adf6a', desc: 'This robot takes 12% less damage.' },
+  surge: { name: 'SURGE', role: 'ENERGY', col: '#80f0ff', desc: 'Ultimate charges 30% faster.' },
+  primed: { name: 'PRIMED', role: 'ENERGY', col: '#80f0ff', desc: 'Starts every battle with 35% ult charge.' },
+  amp: { name: 'COMBO AMP', role: 'COMBO', col: '#ff9a50', desc: 'Steam and Overload started by this robot hit 50% harder.' },
+  finisher: { name: 'FINISHER', role: 'DAMAGE', col: '#ff6060', desc: '+40% damage to enemies under 30% HP.' },
+  overcharge: { name: 'OVERCHARGE', role: 'ULT', col: '#ffd040', desc: 'This robot\'s ultimate is 20% stronger.' }
+};
+const FX_IDS = Object.keys(GEAR_FX);
+// Milestones: clearing the stage opens a new way to play (the story map and result screen announce them)
+const PERKS = {
+  rush: { at: 's8', name: 'CRATE RUSH', text: 'Supply: spend Onyx to skip the wait for a crate.' },
+  tune: { at: 's9', name: 'SET TUNING', text: 'Prep Room: change the set of a gear piece for Onyx.' },
+  reforge: { at: 's11', name: 'REFORGE', text: 'Prep Room: reroll the trait of a gear piece for Gold.' },
+  link: { at: 's12', name: 'ULT LINK', text: 'Ultimates can be upgraded up to level 8.' },
+  pick3: { at: 's13', name: 'PICK OF THREE', text: 'Supply crates offer three pieces to choose from, and the top crate always holds gear.' }
+};
+function perkAt(stageId) { return Object.keys(PERKS).find(k => PERKS[k].at === stageId) || null; }
+function levelCost(lvl) { return Math.round(40 * Math.pow(lvl, 1.35)); }
 function genGear(idx, minRar) {
   const r = Math.random();
   let rar = r < 0.5 ? 0 : r < 0.8 ? 1 : r < 0.95 ? 2 : 3; rar = Math.max(rar, minRar || 0);
   const slot = pick(['weapon', 'armor', 'core']), set = pick(SETS).id, sc = (1 + idx * 0.1) * RAR[rar].m, mods = {};
-  mods[SLOT_MAIN[slot]] = Math.round(rnd(6, 11) * sc);
+  // the slot only leans toward its stat: any piece can be the HP, ATK or SPEED piece
+  const main = Math.random() < 0.55 ? SLOT_MAIN[slot] : pick(['atk', 'hp', 'spd'].filter(k => k !== SLOT_MAIN[slot]));
+  mods[main] = Math.round(rnd(6, 11) * sc);
   if (rar >= 1) mods[pick(['atk', 'hp', 'crit', 'spd'].filter(k => !mods[k]))] = Math.round(rnd(3, 7) * sc);
   if (rar >= 3) mods[pick(['atk', 'hp', 'crit', 'spd'].filter(k => !mods[k]))] = Math.round(rnd(3, 7) * sc);
   const base = { weapon: ['Rail Rifle', 'Pulse Cannon', 'Arc Blaster'], armor: ['Plating', 'Bulk Shell', 'Mesh Armor'], core: ['Power Core', 'Cooling Core', 'Logic Core'] }[slot];
-  return { id: Date.now().toString(36) + Math.floor(Math.random() * 1e5).toString(36), slot, set, rar, mods, name: pick(base) };
+  const g = { id: Date.now().toString(36) + Math.floor(Math.random() * 1e5).toString(36), slot, set, rar, mods, name: pick(base) };
+  if (rar >= 1) g.fx = pick(FX_IDS);
+  return g;
 }
-function gearValue(g) { return 12 + g.rar * 18; }
+function gearValue(g) { return 12 + g.rar * 18 + (g.fx ? 10 : 0); }
 
 // ---------- missions ----------
 const MISSIONS = [

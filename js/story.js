@@ -1,6 +1,7 @@
 'use strict';
 // ---------- story, lore, hero options (all player-facing text is English; design notes are in STORY.md) ----------
-// Text tokens: {HERO} = hero name. A line can also be { o: 'guard', t: '...' } to show only for that backstory.
+// Text tokens: {HERO} = hero name. A line can also be { o: 'guard', t: '...' } to show only for that backstory,
+// or { at: 'find:s4', t: '...' } to show only once that event happened (any condition understood by cleared()).
 // A line starting with "NAME:" is drawn in that speaker's colour, a line starting with "[" is a system log.
 
 // ---------- hero ----------
@@ -11,13 +12,16 @@ const HERO_SKINS = ['#f0c8a0', '#d8a070', '#a8744a', '#6a4630'];
 const HERO_HAIRS = ['#2a1a10', '#6a3a1a', '#c8a040', '#c8c8d0', '#a83a1a', '#16161e'];
 const HERO_MARKS = ['#40f0e0', '#ffb040', '#ff50a0'];
 const ORIGINS = [
-  { id: 'guard', name: 'GUARD', desc: 'You stood watch on the Calloway dam. BONUS: the whole squad has +10% HP.' },
-  { id: 'tech', name: 'TECH', desc: 'You kept the dam\'s valve engines running. BONUS: ultimates charge 15% faster.' },
-  { id: 'smuggler', name: 'SMUGGLER', desc: 'You ran contraband past the Calloway gates. BONUS: +20% gold from battles.' },
-  { id: 'courier', name: 'COURIER', desc: 'You carried sealed messages for House Calloway. BONUS: the squad moves 8% faster.' }
+  { id: 'guard', name: 'GUARD', short: '+10% squad HP', desc: 'You stood watch on the Calloway dam. BONUS: the whole squad has +10% HP.' },
+  { id: 'tech', name: 'TECH', short: '+15% ULT charge', desc: 'You kept the dam\'s valve engines running. BONUS: ultimates charge 15% faster.' },
+  { id: 'smuggler', name: 'SMUGGLER', short: '+20% gold', desc: 'You ran contraband past the Calloway gates. BONUS: +20% gold from battles.' },
+  { id: 'courier', name: 'COURIER', short: '+8% squad speed', desc: 'You carried sealed messages for House Calloway. BONUS: the squad moves 8% faster.' }
 ];
 const HERO_NAMES = ['Wren', 'Cole', 'Rook', 'Sloane', 'Marlow', 'Vesper', 'Flint', 'Sage', 'Jesse', 'Tex', 'Ash', 'Lark'];
 const HERO_DEFAULT = { name: 'Wren', style: 0, outfit: 0, coat: 0, skin: 1, hair: 0, mark: 0, origin: 'guard' };
+// Cosmetic unlocks (not used yet): { outfit: { 3: 's7' } } would lock option 3 of CLOTHES until stage s7 is cleared. Same conditions as the codex (see cleared()).
+const HERO_LOCKS = { style: {}, outfit: {}, coat: {}, skin: {}, hair: {}, mark: {} };
+function heroOptionOpen(kind, i) { const at = HERO_LOCKS[kind] && HERO_LOCKS[kind][i]; return !at || cleared(at); }
 function heroBonus() {
   const o = (typeof SAVE !== 'undefined' && SAVE && SAVE.hero) ? SAVE.hero.origin : '';
   return { hp: o === 'guard' ? 1.1 : 1, ult: o === 'tech' ? 1.15 : 1, gold: o === 'smuggler' ? 1.2 : 1, spd: o === 'courier' ? 1.08 : 1 };
@@ -32,7 +36,7 @@ const SPEAK = {
 function resolveLines(lines) {
   const h = (typeof SAVE !== 'undefined' && SAVE && SAVE.hero) ? SAVE.hero : HERO_DEFAULT, out = [];
   lines.forEach(l => {
-    if (typeof l !== 'string') { if (l.o !== h.origin) return; l = l.t; }
+    if (typeof l !== 'string') { if ((l.o && l.o !== h.origin) || (l.at && !cleared(l.at))) return; l = l.t; }   // o = only for that past, at = only after that event (see cleared)
     let c = '#d8e8ff'; const m = /^(\{HERO\}|[A-Z][A-Z0-9\- ]*[A-Z0-9]):/.exec(l);
     if (m) c = SPEAK[m[1]] || '#ffd040'; else if (l[0] === '[') c = '#80f0ff';
     out.push({ t: l.replace(/\{HERO\}/g, h.name), c });
@@ -42,51 +46,53 @@ function resolveLines(lines) {
 function heroText(s) { return s.replace(/\{HERO\}/g, heroName()); }
 
 // ---------- chapters and stages ----------
+// waves: [type, count, trait?] lists (trait: shield | regen | volatile | mark). goal: clear (default) | time | hold | guard | mark. bonus: optional extra task. echo: changes the stage once the story card after stage `after` was seen.
 // waves: [type, count] lists. wave n starts when wave n-1 is cleared. pre = shown before the first fight, post = after the first win.
 const CHAPTERS = { 1: 'THE DEAD RAIL', 2: 'THE DUST SEA', 3: 'THE DRY RESERVOIR' };
 const STAGES = [
-  { id: 's1', ch: 1, name: 'Willow Fork Ashes', waves: [[['raider', 3]], [['raider', 4]]], gold: 60, onyx: 2,
+  { id: 's1', ch: 1, name: 'Willow Fork Ashes', waves: [[['raider', 3]], [['raider', 4]]], gold: 60, onyx: 2, bonus: { t: 'nodown' },
     brief: 'Rust Riders pick through the burnt camp. Clear the street and take back what is left.',
     pre: [`The Rust Riders are looting what is left of Willow Fork. They are not here for the Seal. They only want scrap, but they are in the way.`,
       `SIGHT: "Aim low. Everything in this town is already half dead."`],
     post: [`Between the ashes lies a melted brass tag, stamped with a gold V.`,
       `BULWARK: "Ezra Vance. The Banker. He signs every fire he starts."`,
       `{HERO}: "Then we follow the rail. Every Vance depot sits on the Dead Rail."`] },
-  { id: 's2', ch: 1, name: 'Dead Rail Crossing', waves: [[['raider', 3], ['gunner', 1]], [['raider', 4], ['gunner', 2]]], gold: 80, onyx: 3, unlock: 'ember',
+  { id: 's2', ch: 1, name: 'Dead Rail Crossing', waves: [[['raider', 3], ['gunner', 1]], [['raider', 4], ['gunner', 2]]], gold: 80, onyx: 3, unlock: 'ember', goal: { t: 'time', sec: 90 }, bonus: { t: 'ults', n: 1 },
     brief: 'Blue coats hold the overpass. Something is still burning inside a wrecked locomotive.',
     pre: [`The Dead Rail was the old oil line. Now it is Vance's road: a hundred miles of track, a toll at every crossing, a blue coat on every bridge.`,
       `MENDER: "Do you hear that? Something is knocking inside that engine."`],
     post: [`Inside the firebox: a stoker bot, chained to the boiler, still shovelling coal that is not there.`,
       `EMBER: "Twelve years I fed that train. It never moved an inch. Unchain me and I will feed the blue coats to the fire instead."`] },
-  { id: 's3', ch: 1, name: 'Ice House', waves: [[['raider', 3], ['drone', 2]], [['gunner', 2], ['drone', 3]], [['raider', 4], ['gunner', 2]]], gold: 100, onyx: 4, unlock: 'frost',
+  { id: 's3', ch: 1, name: 'Ice House', waves: [[['raider', 3], ['drone', 2]], [['gunner', 2], ['drone', 3]], [['raider', 4], ['gunner', 2]]], gold: 100, onyx: 4, unlock: 'frost', goal: { t: 'guard', hp: 160, name: 'SEED CRATE' }, bonus: { t: 'ults', n: 2 },
     brief: 'Watch drones sweep the old cold storage. Look for a cryo unit that still works.',
     pre: [`The Calloway Ice House stored seeds, medicine and blood for the whole valley. It is the last cold place in the Dust.`,
       `MENDER: "Those drones are not Vance's. They scan every face that passes. They are looking for something under the skin."`],
     post: [`A cryo unit hums awake. A keeper bot steps out, carrying a tray of frozen seeds.`,
       `FROST: "Six thousand varieties, kept cold for twelve years. I was promised that somebody would come back for them."`,
       `SIGHT: "Wait. I remember a dais. Three people in a row, each with a hand on a valve wheel. I cannot see their faces."`] },
-  { id: 's4', ch: 1, name: 'Dead Dynamo', waves: [[['gunner', 3], ['drone', 3]], [['raider', 5], ['drone', 3]], [['gunner', 3], ['raider', 4]]], gold: 120, onyx: 5, unlock: 'arc',
+  { id: 's4', ch: 1, name: 'Dead Dynamo', waves: [[['gunner', 3], ['drone', 3]], [['raider', 5], ['drone', 3]], [['gunner', 3], ['raider', 4]]], gold: 120, onyx: 5, unlock: 'arc', goal: { t: 'hold', sec: 45 }, bonus: { t: 'nodown' },
     brief: 'The old dynamo still hums. A Tesla bot guards the control room.',
     pre: [`The Dead Dynamo powered the whole valley until the Breach. Vance drains it every night to run his walkers.`],
     post: [`ARC: "The grid recognises you. Strange. It only ever answered to the dam keys."`,
       `MENDER: "The dam keys? {HERO}... look at your hand."`,
       `The Seal under {HERO}'s skin is glowing in time with the grid.`] },
-  { id: 's5', ch: 1, name: 'Sable Market', waves: [[['raider', 5], ['gunner', 2]], [['brute', 1], ['raider', 3]], [['brute', 1], ['gunner', 3], ['drone', 2]]], gold: 150, onyx: 6, unlock: 'blade',
+  { id: 's5', ch: 1, name: 'Sable Market', waves: [[['raider', 5], ['gunner', 2]], [['brute', 1], ['raider', 3]], [['brute', 1, 'mark'], ['gunner', 3, 'shield'], ['drone', 2]]], gold: 150, onyx: 6, unlock: 'blade', goal: { t: 'mark', name: 'WARLORD BREAKER' }, bonus: { t: 'combos', n: 2 },
     brief: 'Rust Rider warlords trade here under the Sable Crows\' flag. Their muscle is big.',
     pre: [`Sable Market is neutral ground, until someone pays more. The Crows sell water by the thimble and secrets by the pound.`,
       `A Crow broker whispers: "Ezra Vance holds two Seals already. He needs a third. Word is, it is walking toward him right now."`],
     post: [`A cage door falls. A purple blur steps out, holding two blades.`,
       `BLADE: "The Tribunal sent me to cut down a crowd of thirsty settlers. I refused. They locked me in here. Point me at someone who deserves it."`] },
-  { id: 's6', ch: 1, name: 'Wreck Yard', waves: [[['gunner', 4], ['drone', 3]], [['brute', 2], ['raider', 4]], [['brute', 1], ['gunner', 4], ['drone', 3]]], gold: 180, onyx: 7, unlock: 'scrap',
+  { id: 's6', ch: 1, name: 'Wreck Yard', waves: [[['gunner', 4], ['drone', 3]], [['brute', 2, 'volatile'], ['raider', 4]], [['brute', 1], ['gunner', 4], ['drone', 3]]], gold: 180, onyx: 7, unlock: 'scrap', goal: { t: 'time', sec: 110 }, bonus: { t: 'combos', n: 3 },
     brief: 'Cargo cranes loom over the Wreck Yard. An engineer bot is pinned under a container.',
     pre: [`The Wreck Yard is where the Families dump whatever they cannot repair. Machines, mostly. Sometimes more.`],
     post: [`SCRAPPER: "Thanks for the lift. Six years under that box. A lot of time to think. Also to build this."`,
       `He holds up a tangle of pipes with a funnel on top.`,
       `SCRAPPER: "A rain maker. Works perfectly, on paper. Needs only one thing: a lot of water in the sky."`] },
-  { id: 's7', ch: 1, name: 'THE GIANT HAND', boss: true, waves: [[['raider', 4], ['gunner', 2]], [['boss', 1]]], gold: 400, onyx: 12,
+  { id: 's7', ch: 1, name: 'THE GIANT HAND', boss: true, waves: [[['raider', 4], ['gunner', 2]], [['boss', 1]]], gold: 400, onyx: 12, bonus: { t: 'ults', n: 3 },
     brief: 'A rogue loading crane controls the old launch rail. Break it to reach the signal.',
     pre: [`The Launch Rail: the track that threw Ark Halcyon into the sky. Its loading crane never stopped working. It never stopped guarding, either.`,
-      `SIGHT: "I know this place. I stood right there. That crane lifted the last tank aboard."`],
+      `SIGHT: "I know this place. I stood right there. That crane lifted the last tank aboard."`,
+      { at: 'find:s4', t: `ARC: "The grid log from the Dynamo said the same thing. Triple load, all night, and nobody asked why."` }],
     post: [`The Giant Hand folds into the dust. In its core, one recording survived the launch night.`,
       `[ HALCYON LOG 0001: TANKS LOADED. CALLOWAY RESERVOIR 94% TRANSFERRED. THE BREACH WILL BE REPORTED AS A STRUCTURAL FAILURE. ]`,
       `MENDER: "Transferred? Not lost. Not broken. Taken."`,
@@ -94,19 +100,20 @@ const STAGES = [
       { o: 'tech', t: `{HERO} remembers the valve engines running at triple load that night, and thinking nothing of it.` },
       { o: 'smuggler', t: `{HERO} remembers the missing manifest that night. They noticed, and said nothing, and sold the silence.` },
       { o: 'courier', t: `The last sealed message {HERO} ever carried for House Calloway was addressed to the Ark.` }] },
-  { id: 's8', ch: 2, name: 'Dune Edge', waves: [[['raider', 4], ['worm', 2]], [['gunner', 3], ['worm', 2]]], gold: 220, onyx: 8,
+  { id: 's8', ch: 2, name: 'Dune Edge', waves: [[['raider', 4], ['worm', 2]], [['gunner', 3], ['worm', 2]]], gold: 220, onyx: 8, goal: { t: 'hold', sec: 60 }, bonus: { t: 'nodown' },
     brief: 'Dust worms burrow under the dunes. Dodge their bursts.',
     pre: [`Past the rail lies the Dust Sea. Nothing grows here. Only the worms: soil engineers built for the Exodus fields, now blind and hungry.`],
     post: [`MENDER: "The Seal is hotter than yesterday. The closer we get to the signal, the more it burns."`,
       `SCRAPPER: "Makes sense. It is basically a very old key, looking for a very big lock."`] },
-  { id: 's9', ch: 2, name: 'Dust Caravan', waves: [[['raider', 5], ['drone', 3], ['worm', 1]], [['brute', 2], ['gunner', 3]], [['worm', 3], ['drone', 3]]], gold: 260, onyx: 9,
+  { id: 's9', ch: 2, name: 'Dust Caravan', waves: [[['raider', 5], ['drone', 3], ['worm', 1]], [['brute', 1, 'mark'], ['brute', 1, 'regen'], ['gunner', 3]], [['worm', 3], ['drone', 3]]], gold: 260, onyx: 9, bonus: { t: 'combos', n: 3 },
+    echo: { after: 's7', goal: { t: 'mark', name: 'CARAVAN MASTER' }, line: `INTEL: the Halcyon log said the water was transferred. MENDER: "Those wagons carry it. Take down the caravan master and the rest will scatter."` },
     brief: 'A Vance caravan hauls stolen Ark tech across the dunes.',
     pre: [`A Vance caravan crawls across the sea: forty armoured wagons, all carrying pieces of the same machine.`,
       `BLADE: "Blue coats. Plenty of them. I will take the left."`],
     post: [`Crates stamped HALCYON. Inside: a console with three empty slots, shaped like hands.`,
       `SIGHT: "The Return Console. Three Seals open it. Ezra has been collecting them."`,
       `FROST: "Two taken. And one walking straight toward the signal with us."`] },
-  { id: 's10', ch: 2, name: 'Bone Basin', waves: [[['worm', 3], ['raider', 5]], [['brute', 2], ['worm', 2]], [['gunner', 4], ['drone', 4], ['worm', 2]]], gold: 300, onyx: 10,
+  { id: 's10', ch: 2, name: 'Bone Basin', waves: [[['worm', 3, 'regen'], ['raider', 5]], [['brute', 2], ['worm', 2]], [['gunner', 4], ['drone', 4], ['worm', 2]]], gold: 300, onyx: 10, goal: { t: 'time', sec: 130 }, bonus: { t: 'combos', n: 4 },
     brief: 'A graveyard of crashed colony shuttles. The wrecks are full of worms and old secrets.',
     pre: [`Bone Basin is where the Exodus shuttles fell, when the sky filled with debris. Nine hundred colonists never reached the Ark.`,
       `MENDER: "Families still sit by the wrecks and listen to the radios. Some of the radios still answer."`],
@@ -114,15 +121,17 @@ const STAGES = [
       `[ SHUTTLE 14: WE WERE PROMISED A SEAT. THE DOOR WAS CLOSED AT T MINUS 40. WE ARE ALIVE. IS ANYONE LISTENING. ]`,
       `Fresh graves ring the wreck, decorated with flowers made of copper wire.`,
       `BULWARK: "A gate that closes on people. I know that sound."`] },
-  { id: 's11', ch: 2, name: 'Signal Tower', waves: [[['gunner', 4], ['brute', 1]], [['drone', 5], ['worm', 3]], [['brute', 3], ['gunner', 4]]], gold: 340, onyx: 11,
+  { id: 's11', ch: 2, name: 'Signal Tower', waves: [[['gunner', 4], ['brute', 1]], [['drone', 5, 'shield'], ['worm', 3]], [['brute', 3], ['gunner', 4]]], gold: 340, onyx: 11, bonus: { t: 'nodown' },
+    echo: { after: 's10', goal: { t: 'guard', hp: 220, name: 'RADIO RELAY' }, line: `INTEL: the shuttle radios still answer. MENDER: "Keep the relay alive, and the survivors can finally reach the tower."` },
     brief: 'The signal comes from here. The Seal burns hotter with every step.',
     pre: [`The Signal Tower was the Ark's last uplink. A war-walker is parked outside, and its owner is waiting.`,
+      { at: 'find:s10', t: `MENDER: "Seat 114. I cannot stop thinking about that copper flower."` },
       `EZRA VANCE: "Keyholder. I have two Seals in a box and a third in your arm. Walk to me, and I promise it will not be slow."`],
     post: [`The tower rings once, and the Seal flares white.`,
       `[ HALCYON: KEYHOLDER 3 OF 3 RECOGNISED. RETURN CONSOLE: CALLOWAY RESERVOIR, SUBLEVEL 4. ]`,
       `SIGHT: "The reservoir. Of course. The key goes back to the lock where it was first turned."`,
       `SIGHT: "I remember a stair now. And someone young, looking back over their shoulder."`] },
-  { id: 's12', ch: 2, name: 'VANCE WALKER', boss: true, waves: [[['brute', 2], ['worm', 2], ['gunner', 3]], [['walker', 1], ['gunner', 3]]], gold: 700, onyx: 20,
+  { id: 's12', ch: 2, name: 'VANCE WALKER', boss: true, waves: [[['brute', 2], ['worm', 2], ['gunner', 3]], [['walker', 1], ['gunner', 3]]], gold: 700, onyx: 20, bonus: { t: 'ults', n: 4 },
     brief: 'Ezra Vance rides his war-walker out of the dunes. This ends tonight.',
     pre: [`Ezra Vance climbs into the Walker. His coat is trimmed in gold, and his eyes are tired.`,
       `EZRA VANCE: "My brother lived in Lower Fork. Did you know? He was washing his hands when the Breach came."`,
@@ -132,24 +141,28 @@ const STAGES = [
       `EZRA VANCE: "I burned your camp for revenge. He drained the whole valley for a ticket to the stars."`,
       `He presses two cracked Seals into {HERO}'s hand. They are cold now.`,
       `{HERO} remembers the weight of the valve wheel, and how many people thanked them for turning it.`] },
-  { id: 's13', ch: 3, name: 'Calloway Gate', waves: [[['gunner', 4], ['brute', 1]], [['brute', 2], ['raider', 4]], [['brute', 2], ['gunner', 4], ['drone', 3]]], gold: 380, onyx: 12,
+  { id: 's13', ch: 3, name: 'Calloway Gate', waves: [[['gunner', 4, 'shield'], ['brute', 1]], [['brute', 2], ['raider', 4]], [['brute', 2], ['gunner', 4], ['drone', 3]]], gold: 380, onyx: 12, bonus: { t: 'combos', n: 4 },
+    echo: { after: 's12', charge: 40, line: `INTEL: Ezra's cracked Seals hum in {HERO}'s hand. All three robots start this fight with 40% ultimate charge.` },
     brief: 'Old Calloway\'s household guard blocks the reservoir. Bulwark knows this gate.',
     pre: [`The Calloway Gate. Bulwark's gate, in the old days. Today House guards hold it, and they have never seen water either.`,
       `BULWARK: "Twelve years I wished to see this gate from the other side. Let me walk through it."`],
     post: [`The gate opens. Beyond it: a canyon wall, a drained basin, and a long stair down into the dam.`,
       `A rusted speaker crackles to life.`,
       `OLD CALLOWAY: "{HERO}. I wondered which of you would come. Come down. I will tell you everything."`] },
-  { id: 's14', ch: 3, name: 'Drain Tunnels', waves: [[['drone', 5], ['worm', 2]], [['gunner', 4], ['brute', 2]], [['worm', 3], ['drone', 4], ['brute', 2]]], gold: 420, onyx: 13,
+  { id: 's14', ch: 3, name: 'Drain Tunnels', waves: [[['drone', 5], ['worm', 2]], [['gunner', 4, 'shield'], ['brute', 2]], [['worm', 3], ['drone', 4], ['brute', 2, 'volatile']]], gold: 420, onyx: 13, goal: { t: 'hold', sec: 75 }, bonus: { t: 'nodown' },
     brief: 'Drones, guards and worms haunt the dam\'s drain tunnels. The truth is at the bottom.',
     pre: [`The Drain Tunnels run under the dam, down to Sublevel 4. The walls are covered in valve numbers and old name tags.`,
+      { at: 'find:s13', t: `BULWARK: "Three hundred and eleven. I know that number. Not here, not now."` },
       `SCRAPPER: "These pipes are still warm. Something down here is running."`],
     post: [`Sublevel 4. Three seats, three valve wheels. One of the wheels has {HERO}'s old handprint worn into it.`,
       `OLD CALLOWAY: "You were seventeen. I told you it was a flood release, and you believed me. The Ark needed our water, and the Families were to be told afterwards."`,
       `SIGHT: "I remember all of it now. I ran at the dais to stop you. Warden knocked me down the stairs. The last thing I saw was the key turning."`,
       `SIGHT: "I am not angry. You were a child, and I was a robot that obeyed. This time we choose."`] },
-  { id: 's15', ch: 3, name: 'THE WARDEN', boss: true, waves: [[['brute', 2], ['gunner', 3]], [['warden', 1], ['drone', 3]]], gold: 900, onyx: 25,
+  { id: 's15', ch: 3, name: 'THE WARDEN', boss: true, waves: [[['brute', 2], ['gunner', 3]], [['warden', 1], ['drone', 3]]], gold: 900, onyx: 25, bonus: { t: 'ults', n: 4 },
+    echo: { after: 's14', chargeOf: { sight: 100 }, line: `INTEL: SIGHT remembers the stairs now. If SIGHT is on the squad, its ultimate starts fully charged.` },
     brief: 'WARDEN-1, Calloway\'s last guardian, protects the Return Console.',
     pre: [`WARDEN-1 stands in front of the console: Calloway's sheriff-bot, built twice the size of the Marshal, and never taught how to question an order.`,
+      { at: 'find:s14', t: `{HERO}: "The crew tag in the tunnel had a name scratched out. I keep wondering whose it was."` },
       `SIGHT: "Brother. You pushed me down those stairs. I forgive you. Now step aside."`,
       `WARDEN-1: "ORDER 001: THE CONSOLE IS NOT TO BE OPENED. REPEAT: NOT TO BE OPENED."`],
     post: [`WARDEN-1 falls to one knee. The star on its chest flickers out.`,
@@ -210,14 +223,23 @@ const ENDINGS = {
 };
 
 // ---------- codex ----------
-// cleared(at): null = always, 'sN' = that stage cleared, 'end' = any ending, 'end:rain' / 'end:ascend' = that ending.
+// cleared(at): null = always, 'sN' = that stage cleared, 'end' = any ending, 'end:rain' / 'end:ascend' = that ending,
+// 'find:sN' = the optional find of that stage was picked up, 'foe:TYPE' = that enemy type was destroyed at least once.
 function cleared(at) {
   if (!at) return true;
+  if (typeof SAVE === 'undefined' || !SAVE) return false;
   if (at === 'end') return !!SAVE.ending;
   if (at.indexOf('end:') === 0) return SAVE.ending === at.slice(4);
+  if (at.indexOf('find:') === 0) return !!(SAVE.found && SAVE.found[at.slice(5)]);
+  if (at.indexOf('foe:') === 0) return foeSeen(at.slice(4));
   return (SAVE.stages[at] || 0) > 0;
 }
-const CODEX_CATS = ['WORLD', 'FAMILIES', 'ROBOTS', 'SIGNALS'];
+// An enemy counts as met after it was destroyed in any battle (SAVE.disc), or when a cleared stage contains it (older saves have no SAVE.disc).
+function foeSeen(type) {
+  if (SAVE.disc && SAVE.disc[type]) return true;
+  return STAGES.some(s => SAVE.stages[s.id] > 0 && s.waves.some(w => w.some(e => e[0] === type)));
+}
+const CODEX_CATS = ['WORLD', 'FAMILIES', 'ROBOTS', 'FOES', 'SIGNALS', 'FINDS'];
 const CODEX = [
   // ----- WORLD -----
   { cat: 'WORLD', title: 'THE BREACH', at: null, parts: [
@@ -317,3 +339,22 @@ const CODEX = [
 function codexVisible(e) { return cleared(e.at); }
 function codexParts(e) { return e.parts.filter(p => !(p.at && p.at.indexOf('end:') === 0 && !cleared(p.at))); }
 function codexCount() { let n = 0; CODEX.forEach(e => { if (codexVisible(e)) codexParts(e).forEach(p => { if (cleared(p.at)) n++; }); }); return n; }
+
+// ---------- goals, bonus tasks and story echoes ----------
+function stageFx(st) {   // the goal and extras this stage has right now (an echo applies once the player saw the story card it depends on)
+  const e = st.echo, on = !!(e && typeof SAVE !== 'undefined' && SAVE && SAVE.seen && SAVE.seen['post' + e.after]);
+  return { goal: on && e.goal ? e.goal : st.goal || { t: 'clear' }, echo: on ? e : null };
+}
+function goalText(g) {
+  return g.t === 'time' ? 'Clear every wave in ' + g.sec + ' seconds' : g.t === 'hold' ? 'Survive ' + g.sec + ' seconds as waves keep coming' :
+    g.t === 'guard' ? 'Protect the ' + g.name + ' until the last wave falls' : g.t === 'mark' ? 'Take down the marked ' + g.name : 'Destroy every wave';
+}
+function goalShort(g) {
+  return g.t === 'time' ? 'Clear all waves in ' + g.sec + 's' : g.t === 'hold' ? 'Hold out for ' + g.sec + 's' : g.t === 'guard' ? 'Protect the ' + g.name : g.t === 'mark' ? 'Kill the marked ' + g.name : 'Destroy every wave';
+}
+function bonusText(b) {
+  return b.t === 'nodown' ? 'Lose no robot' : b.t === 'noult' ? 'Win without ultimates' : b.t === 'ults' ? 'Use ' + b.n + (b.n > 1 ? ' ultimates' : ' ultimate') :
+    b.t === 'combos' ? 'Trigger ' + b.n + ' element combos' : b.t === 'fast' ? 'Win in under ' + b.sec + ' seconds' : '';
+}
+function bonusOnyx(st) { return Math.max(2, Math.round(st.onyx * 0.6)); }
+function stageTraits(st) { const o = {}; st.waves.forEach(w => w.forEach(e => { if (e[2] && TRAITS[e[2]]) o[e[2]] = 1; })); return Object.keys(o); }
