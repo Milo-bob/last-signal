@@ -313,7 +313,7 @@ function battlePointer(kind, x, y) {   // x,y in arena (low-res) coordinates
 
 // ---------- drawing (pixel layer) ----------
 function sprAt(g, name, f, x, y, alpha, flash, flip) {
-  const s = Art.sprite(name, f), px = Math.round(x - s.lw / 2), py = Math.round(y - s.lh + 6);
+  const s = Art.sprite(name, f), px = Math.round(x - s.lw / 2), py = Math.round(y - s.lh + (s.px ? 3 : 6));
   if (alpha < 1) g.globalAlpha = alpha; const sm = g.imageSmoothingEnabled; g.imageSmoothingEnabled = false;
   if (flip) { g.save(); g.translate(px + s.lw, py); g.scale(-1, 1); g.drawImage(s, 0, 0, s.lw, s.lh); if (flash > 0) g.drawImage(flashOf(s), 0, 0, s.lw, s.lh); g.restore(); }
   else { g.drawImage(s, px, py, s.lw, s.lh); if (flash > 0) g.drawImage(flashOf(s), px, py, s.lw, s.lh); }

@@ -48,8 +48,8 @@ function topBar(title) {
   disc(ctx, 940, 36, 12, '#ffd040'); ctx.fillStyle = '#ffd040'; text(String(SAVE.gold), 966, 48, 28, '#ffd040');
   button(1130, 12, 120, 46, 'HOME', () => { scene = 'hub'; Snd.play('ui'); }, scene === 'hub', 22);
 }
-function smallSprite(name, x, y, sc, f) { const s = Art.sprite(name, f || 0), m = s.px ? Math.max(1, Math.round(sc * 0.67)) : sc, w = s.width * m / (s.px ? 1 : s.width / s.lw), h = s.height * m / (s.px ? 1 : s.width / s.lw); ctx.imageSmoothingEnabled = false; ctx.drawImage(s, Math.round(x - w / 2), Math.round(y - h + (s.px ? 3 * m : 6 * sc)), w, h); }
-function faceSprite(name, cx, top, sc, f) { const s = Art.icon(name, f || 0); ctx.imageSmoothingEnabled = false; const k = s.width / s.lw; ctx.drawImage(s, 0, 0, s.width, 30 * k, Math.round(cx - s.lw * sc / 2), top, s.lw * sc, 30 * sc); }
+function smallSprite(name, x, y, sc, f) { const s = Art.sprite(name, f || 0), m = s.px ? sc + 1 : sc, w = s.width * m / (s.px ? 1 : s.width / s.lw), h = s.height * m / (s.px ? 1 : s.width / s.lw); ctx.imageSmoothingEnabled = false; ctx.drawImage(s, Math.round(x - w / 2), Math.round(y - h + (s.px ? 2 * m : 6 * sc)), w, h); }
+function faceSprite(name, cx, top, sc, f) { const s = Art.icon(name, f || 0); ctx.imageSmoothingEnabled = false; if (s.px) { ctx.drawImage(s, 0, 1, 24, 16, Math.round(cx - 33), top + 4, 66, 44); return; } const k = s.width / s.lw; ctx.drawImage(s, 0, 0, s.width, 30 * k, Math.round(cx - s.lw * sc / 2), top, s.lw * sc, 30 * sc); }
 function stars(x, y, n, sz) { for (let i = 0; i < 3; i++) { ctx.fillStyle = i < n ? '#ffd040' : '#3a3a4a'; ctx.fillRect(x + i * (sz + 4), y, sz, sz); } }
 function bar(x, y, w, h, k, col, back) { ctx.fillStyle = '#000'; ctx.fillRect(x - 3, y - 3, w + 6, h + 6); ctx.fillStyle = back || '#2a2a3a'; ctx.fillRect(x, y, w, h); ctx.fillStyle = col; ctx.fillRect(x, y, Math.round(w * clamp(k, 0, 1)), h); }
 function gearLine(g) { return Object.keys(g.mods).map(k => '+' + g.mods[k] + '% ' + MOD_N[k]).join('   '); }

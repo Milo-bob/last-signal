@@ -4,10 +4,11 @@
 // A line starting with "NAME:" is drawn in that speaker's colour, a line starting with "[" is a system log.
 
 // ---------- hero ----------
-const HERO_HATS = ['STETSON', 'CAP', 'HOOD', 'BANDANA'];
+const HERO_STYLES = ['CROP', 'SLICKED', 'LONG', 'MOHAWK'];
+const HERO_OUTFITS = ['DUSTER', 'VEST', 'TANK', 'ARMOR'];
 const HERO_COATS = ['#8a4a2a', '#3a5a7a', '#4a6a3a', '#7a2a2a', '#5a5a62', '#6a4a7a'];
 const HERO_SKINS = ['#f0c8a0', '#d8a070', '#a8744a', '#6a4630'];
-const HERO_HAIRS = ['#2a1a10', '#6a3a1a', '#c8a040', '#c8c8d0'];
+const HERO_HAIRS = ['#2a1a10', '#6a3a1a', '#c8a040', '#c8c8d0', '#a83a1a', '#16161e'];
 const HERO_MARKS = ['#40f0e0', '#ffb040', '#ff50a0'];
 const ORIGINS = [
   { id: 'guard', name: 'GUARD', desc: 'You stood watch on the Calloway dam. BONUS: the whole squad has +10% HP.' },
@@ -16,7 +17,7 @@ const ORIGINS = [
   { id: 'courier', name: 'COURIER', desc: 'You carried sealed messages for House Calloway. BONUS: the squad moves 8% faster.' }
 ];
 const HERO_NAMES = ['Wren', 'Cole', 'Rook', 'Sloane', 'Marlow', 'Vesper', 'Flint', 'Sage', 'Jesse', 'Tex', 'Ash', 'Lark'];
-const HERO_DEFAULT = { name: 'Wren', hat: 0, coat: 0, skin: 1, hair: 0, mark: 0, origin: 'guard' };
+const HERO_DEFAULT = { name: 'Wren', style: 0, outfit: 0, coat: 0, skin: 1, hair: 0, mark: 0, origin: 'guard' };
 function heroBonus() {
   const o = (typeof SAVE !== 'undefined' && SAVE && SAVE.hero) ? SAVE.hero.origin : '';
   return { hp: o === 'guard' ? 1.1 : 1, ult: o === 'tech' ? 1.15 : 1, gold: o === 'smuggler' ? 1.2 : 1, spd: o === 'courier' ? 1.08 : 1 };

@@ -24,8 +24,8 @@ function drawHero() {
   text(done ? 'YOUR HERO' : 'CREATE YOUR HERO', 40, 60, 40, '#fff');
   if (done) button(1130, 12, 120, 46, 'HOME', () => { saveGame(); scene = 'hub'; Snd.play('ui'); }, false, 22);
   panel(40, 90, 440, 590, '#80f0ff');
-  const s = Art.heroFront(hs, Math.floor(time * 1.5) % 2); ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(s, 260 - s.lw * 5, 110, s.lw * 10, s.lh * 10);
+  const s = Art.hero(hs, Math.floor(time * 1.5) % 2); ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(s, 104, 150, 312, 312);
   const nm = hs.name + (heroTyping && Math.floor(time * 3) % 2 ? '_' : '');
   text(nm.toUpperCase(), 260, 536, 40, '#fff', 'center');
   const org = ORIGINS.find(o => o.id === hs.origin);
@@ -39,12 +39,13 @@ function drawHero() {
 
   panel(520, 90, 720, 590, '#80f0ff');
   const lab = (t, y) => text(t, 550, y + 32, 20, '#80f0ff');
-  lab('HAT', 130); HERO_HATS.forEach((n, i) => opt(700 + i * 124, 130, 118, 44, n, hs.hat === i, () => { hs.hat = i; Snd.play('ui'); }, false, 18));
-  lab('COAT', 200); HERO_COATS.forEach((c, i) => swatch(700 + i * 72, 200, 64, 44, c, hs.coat === i, () => { hs.coat = i; Snd.play('ui'); }));
-  lab('SKIN', 270); HERO_SKINS.forEach((c, i) => swatch(700 + i * 72, 270, 64, 44, c, hs.skin === i, () => { hs.skin = i; Snd.play('ui'); }));
-  lab('HAIR', 340); HERO_HAIRS.forEach((c, i) => swatch(700 + i * 72, 340, 64, 44, c, hs.hair === i, () => { hs.hair = i; Snd.play('ui'); }));
-  lab('SEAL', 410); HERO_MARKS.forEach((c, i) => swatch(700 + i * 72, 410, 64, 44, c, hs.mark === i, () => { hs.mark = i; Snd.play('ui'); }, done));
-  lab('PAST', 480); ORIGINS.forEach((o, i) => opt(700 + i * 124, 480, 118, 44, o.name, hs.origin === o.id, () => { hs.origin = o.id; Snd.play('ui'); }, done, 18));
+  lab('STYLE', 114); HERO_STYLES.forEach((n, i) => opt(700 + i * 124, 114, 118, 44, n, (hs.style | 0) === i, () => { hs.style = i; Snd.play('ui'); }, false, 18));
+  lab('CLOTHES', 174); HERO_OUTFITS.forEach((n, i) => opt(700 + i * 124, 174, 118, 44, n, (hs.outfit | 0) === i, () => { hs.outfit = i; Snd.play('ui'); }, false, 18));
+  lab('COLOR', 234); HERO_COATS.forEach((c, i) => swatch(700 + i * 72, 234, 64, 44, c, hs.coat === i, () => { hs.coat = i; Snd.play('ui'); }));
+  lab('SKIN', 294); HERO_SKINS.forEach((c, i) => swatch(700 + i * 72, 294, 64, 44, c, hs.skin === i, () => { hs.skin = i; Snd.play('ui'); }));
+  lab('HAIR', 354); HERO_HAIRS.forEach((c, i) => swatch(700 + i * 72, 354, 64, 44, c, hs.hair === i, () => { hs.hair = i; Snd.play('ui'); }));
+  lab('SEAL', 414); HERO_MARKS.forEach((c, i) => swatch(700 + i * 72, 414, 64, 44, c, hs.mark === i, () => { hs.mark = i; Snd.play('ui'); }, done));
+  lab('PAST', 474); ORIGINS.forEach((o, i) => opt(700 + i * 124, 474, 118, 44, o.name, hs.origin === o.id, () => { hs.origin = o.id; Snd.play('ui'); }, done, 18));
   wrap(org.desc, 650, 19).forEach((l, i) => text(l, 550, 568 + i * 25, 19, '#d8e4ff'));
   if (done) text('Past and Seal are fixed after the story begins.', 550, 640, 15, '#8890b0');
   button(900, 612, 300, 54, done ? 'SAVE' : 'BEGIN', () => { if (done) { saveGame(); scene = 'hub'; Snd.play('ui'); } else confirmHero(); }, false, 28);
