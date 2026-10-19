@@ -77,7 +77,10 @@ const Snd = (function () {
     ult() { tone(200, 1200, 0.3, 'sawtooth', 0.2); noise(0.3, 3000, 400, 0.3); },
     win() { [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => ac && tone(f, f, 0.16, 'square', 0.18), i * 110)); },
     lose() { [400, 330, 260, 190].forEach((f, i) => setTimeout(() => ac && tone(f, f * 0.8, 0.25, 'sawtooth', 0.2), i * 160)); },
-    roar() { tone(90, 40, 0.8, 'sawtooth', 0.35); noise(0.7, 600, 100, 0.4); }
+    roar() { tone(90, 40, 0.8, 'sawtooth', 0.35); noise(0.7, 600, 100, 0.4); },
+    talk() { tone(170 + Math.random() * 70, 110, 0.04, 'square', 0.035); },
+    rumble() { noise(1.2, 400, 50, 0.7); tone(55, 30, 1.0, 'sawtooth', 0.3); },
+    bell() { tone(880, 860, 0.5, 'sine', 0.18); tone(1320, 1300, 0.4, 'sine', 0.08); }
   };
   return {
     init,

@@ -10,11 +10,12 @@ const TIPS = {
   move: { basic: true, text: 'Tap the ground to move the selected robot. Enemies hit the nearest robot, so keep a tank in front.' },
   focus: { basic: true, text: 'Tap an enemy to make the selected robot attack it. Otherwise robots pick the nearest enemy.' },
   ult: { event: true, text: 'ULT ready! Tap the glowing ULT button or press 1, 2, 3. It charges as robots deal and take damage.' },
+  slam: { event: true, text: 'Your hero fights too! Tap the SLAM button on its card or press 4: a shockwave that hurts, knocks back, stuns and blocks enemy shots.' },
   zone: { event: true, once: true, adv: true, text: 'Red areas are incoming attacks. Move your robots out before the warning ends.' },
   status: { event: true, once: true, adv: true, text: 'Fire burns, Ice slows. Fire on a chilled enemy (or Ice on a burning one) makes STEAM.' },
   steam: { event: true, once: true, adv: true, text: 'Steam wets enemies for 4 s. A Shock hit on a wet enemy causes OVERLOAD: stun and chain damage.' }
 };
-const TIP_ORDER = ['zone', 'steam', 'status', 'ult', 'sel', 'move', 'focus'];   // events first, then the basics in teaching order
+const TIP_ORDER = ['zone', 'steam', 'status', 'ult', 'slam', 'sel', 'move', 'focus'];   // events first, then the basics in teaching order
 
 function tipState() { if (!SAVE.tut) SAVE.tut = {}; return SAVE.tut; }
 function tipFinished(id) { const n = tipState()[id] | 0; return n >= TIP_DONE || n >= TIP_MAX_SHOWS; }
@@ -36,15 +37,15 @@ function tipEligible(id) {
 // called by the battle code when the player did something, or something happened that a tip is about
 function tutEvent(n) {
   if (!B || !SAVE || !SAVE.tut) return;
-  if (n === 'sel' || n === 'move' || n === 'focus' || n === 'ult') tipComplete(n);   // the player found it without the tip
+  if (n === 'sel' || n === 'move' || n === 'focus' || n === 'ult' || n === 'slam') tipComplete(n);   // the player found it without the tip
   else if (n === 'zoneDone') { if (B.tip && B.tip.id === 'zone') tipComplete('zone'); }
   else if (n === 'status') B.pend.status = true;
   else if (n === 'steam') { B.pend.steam = true; B.pend.status = false; tipComplete('status'); }
   else if (n === 'overload') tipComplete('steam');
 }
 function tutUpdate(dt) {
-  if (SAVE.tipsOff || B.state !== 'play') { B.tip = null; return; }
-  if (B.t > 1) B.hunters.forEach(h => { if (h.alive && h.charge >= 100) B.pend.ult = true; });
+  if (SAVE.tipsOff || B.state !== 'play' || B.prol) { B.tip = null; return; }
+  if (B.t > 1) B.hunters.forEach(h => { if (h.alive && h.charge >= 100) B.pend.ult = true; if (h.isHero && h.alive && h.slamCd <= 0 && B.t > 4) B.pend.slam = true; });
   if (B.t < 1.5) return;
   if (B.tip) {
     B.tip.t += dt;
@@ -76,12 +77,12 @@ const HELP = [
     'Enemies attack the nearest robot. Keep sturdy robots like BULWARK in front and fragile ones like SIGHT or MENDER behind.', 'A robot without an order walks by itself to stay in range of its target.'] },
   { title: 'TARGET', lines: ['Tap an enemy to make the selected robot attack it. A small arrow in the robot\'s color marks the target.', 'Moving the robot clears its target.', 'Enemies underground (Dust Worms) cannot be targeted.'] },
   { title: 'AUTO ATTACK', lines: ['Every robot attacks the nearest enemy in range by itself. Melee robots walk up to it, ranged robots keep their distance.',
-    'MENDER heals the most hurt friend instead of attacking.', 'Gold numbers with a ! are critical hits and deal extra damage.'] },
+    'MENDER heals the most hurt friend instead of attacking.', 'Your HERO fights too, up close: two quick jabs, then a heavy third hit that knocks enemies back. Tap the hero to select and move it like a robot.', 'Gold numbers with a ! are critical hits and deal extra damage.'] },
   { title: 'ULTIMATES', lines: ['Each robot has one ultimate. Its bar fills as the robot deals and takes damage.', 'When the ULT button glows gold, tap it or press 1, 2 or 3 (left to right).',
     'Tapping it too early shows the charge. The SQUAD screen explains what each ultimate does.'] },
   { title: 'ELEMENTS', lines: ['FIRE sets an enemy on fire (damage over time). ICE chills it (it moves slower).', 'FIRE + ICE on the same enemy makes STEAM: it and nearby enemies get wet and take damage. Wet enemies have a blue line under their feet.',
     'SHOCK on a wet enemy causes OVERLOAD: heavy damage, a stun, and chain damage to enemies nearby.'] },
-  { title: 'RED WARNINGS', lines: ['Red circles and red bars are warnings. The attack lands when the warning ends, and robots inside take damage.', 'Dust Worms and bosses use them. Move the robot away in time by tapping the ground elsewhere.'] },
+  { title: 'RED WARNINGS', lines: ['A red ! over a melee enemy means a hit is coming in a moment. Step away, stun it or knock it back to dodge. The hero SLAM (card button or key 4) also destroys enemy shots.','Red circles and red bars are warnings. The attack lands when the warning ends, and robots inside take damage.', 'Dust Worms and bosses use them. Move the robot away in time by tapping the ground elsewhere.'] },
   { title: 'GEAR AND SETS', lines: ['Win battles and open supply crates to get gear. Equip it in the PREP ROOM: 3 slots per robot.', 'The colored corner of a gear icon shows its set. Wear 2 or 3 pieces of one set for a bonus:']
     .concat(SETS.map(s => s.name + ': 2 pieces ' + s.b2 + ', 3 pieces ' + s.b3)) },
   { title: 'GEAR TRAITS', lines: ['Any gear slot can carry any stat. FINE gear and better also have a TRAIT, shown by the colored tag on the icon. Traits stack when a robot wears two of the same:']
@@ -94,7 +95,7 @@ const HELP = [
     'Enemies can have traits. SHIELDED ones carry a shield that shock breaks fast. REGEN ones repair themselves until you burn or chill them. VOLATILE ones explode when destroyed.',
     'The story map lists the goal, bonus and traits before you start. Some stages change after you learn something in the story: look for INTEL.'] },
   { title: 'STARS', lines: ['3 stars: no robot went down. 2 stars: one went down. 1 star: two or more.', 'To leave a fight, pause with II or P and choose QUIT STAGE.'] },
-  { title: 'CONTROLS', lines: ['Mouse or touch: everything above.', 'Keys: 1 2 3 ultimates, P pause, F speed x1 / x2, M sound, Backspace pause or go back.'] }
+  { title: 'CONTROLS', lines: ['Mouse or touch: everything above.', 'Keys: 1 2 3 ultimates, 4 hero SLAM, P pause, F speed x1 / x2, M sound, Backspace pause or go back.'] }
 ];
 function drawHelp() {
   hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.86)'; ctx.fillRect(0, 0, W, H); topBar('HOW TO PLAY', () => { scene = helpReturn; Snd.play('ui'); });

@@ -85,7 +85,7 @@ const Art = (function () {
     return c;
   }
   const bgCache = {};
-  function arena(ch) { return bgCache[ch] || (bgCache[ch] = bakeArena(ch)); }
+  function arena(k) { if (typeof k === 'string') return Back.ground(k); return bgCache[k] || (bgCache[k] = bakeArena(k)); }   // a number = the old per-chapter floor, a string = a floor kind from backdrops.js
   function drawEarth(g, cx, cy, r) {
     for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
       if (x * x + y * y > r * r) continue;
@@ -133,6 +133,7 @@ const Art = (function () {
   const icoCache = {};
   function sprite(name, f) { const l = S[name]; return l[(f || 0) % l.length]; }
   Robots16.names.forEach(n => { S[n] = [0, 1].map(fr => Robots16.get(n, fr)); });
+  Cast.names.forEach(n => { S[n] = [0, 1].map(fr => Cast.get(n, fr)); });   // the story cast (cutscene people) draw like the robots
   function icon(name, f) { const l = S[name]; return l[(f || 0) % l.length]; }
   return { mk, tint, outline, sprite, icon, arena, hub, drawEarth, hero: (o, f) => Hero16.get(o, f), sideView: true, S };
 })();

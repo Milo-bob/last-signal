@@ -343,6 +343,86 @@ const Robots16 = (function () {
         '....zaz...zaz...',
         '...zkkkz.zkkkz..',
         '................']
+    },
+    hound: { split: 9,   // Seal Hound: Vance's tracker, a fast four-legged frame with a blue collar and a nose tuned to the Seal
+      pal: { a: '#3a4256', A: '#6a7aa0', z: '#12141e', e: '#ff3030', E: '#ffb0b0', t: '#e8e8f0', c: '#2a4aa0', g: '#e8c040', m: '#8a8a98', d: '#0a0a12' },
+      rows: [
+        '................',
+        '................',
+        '................',
+        '................',
+        '..........zzz...',
+        '..z......zAAAzz.',
+        '..zz....zAAeEazz',
+        '..zazzzzzAAAattt',
+        '...zaAAAAAAAccaz',
+        '..zaaAAAaaAAcgz.',
+        '..zaaaaaaaaaaz..',
+        '..zazaz..zazaz..',
+        '..zazaz..zazaz..',
+        '..zmzmz..zmzmz..',
+        '..ddd.dd.ddd.dd.',
+        '................']
+    },
+    welder: { split: 10,   // Dalton Welder: shop-floor frame in orange and grey, a dark mask with a green slit, a torch
+      pal: { o: '#d87a30', O: '#f0a050', k: '#7a3e14', a: '#a85a24', g: '#5a5a64', G: '#9a9aa4', d: '#14141a', v: '#80ffb0', V: '#d8ffe8', f: '#60c0ff', F: '#e0f4ff', m: '#8a8a98', z: '#2a1608' },
+      rows: [
+        '................',
+        '.....zGGGGz.....',
+        '....zGggggGz....',
+        '....zgdvVdgz....',
+        '....zgddddgz....',
+        '.....zgggz......',
+        '...zzoOOOOozz...',
+        '..zoOooaaooOoz..',
+        '..zgozaooazogzfF',
+        '..zgozoooozogmFf',
+        '...zzzkkkkzzzmfF',
+        '....zooookzz....',
+        '....zoo..ooz....',
+        '....zkk..kkz....',
+        '...dddd..dddd...',
+        '................']
+    },
+    judge: { split: 11,   // THE JUDGE (Judge Verity): Tribunal justice in a powdered wig, a black robe, a gavel
+      pal: { w: '#e8e4f0', W: '#ffffff', x: '#a8a4c0', a: '#2c2c3a', A: '#4e4e62', z: '#0e0e16', d: '#08080e', c: '#40f0e0', g: '#e8c040', G: '#fff0a0', m: '#8a8a98', M: '#d0d0e0', j: '#ececf4' },
+      rows: [
+        '.....zwWWwz.....',
+        '....zwWwwwWz....',
+        '...zwWxwwwxWz...',
+        '...zwwxzaazxwz..',
+        '....zwxdccdxz...',
+        '.....zwzaazw....',
+        '......zjjjz.....',
+        '..zAAzjjjjzAAz..',
+        '.zAaazjggjzaaAzM',
+        '.zAaazajjazaaAMM',
+        '.zgAazaaaazaAgzm',
+        '..zzzzaaaazzzzm.',
+        '...zaaaaaaaaz...',
+        '...zaaAaaAaaz...',
+        '...zaaaaaaaaz...',
+        '..zddddddddddz..']
+    },
+    sentinel: { split: 8,   // HALCYON SENTINEL: the Ark's guardian, a floating shell with one cyan eye and two ring-arms
+      pal: { a: '#5a6a92', A: '#a0b0d8', z: '#161c34', c: '#40f0e0', C: '#e0ffff', r: '#2a3454', w: '#e8f0ff', g: '#8a98c0' },
+      rows: [
+        '.......zz.......',
+        '.....zzAAzz.....',
+        '..z.zAAAAAAz.z..',
+        '.zgzAAaaaaAAzgz.',
+        '.zAzAazccczaAzAz',
+        '.zAzazcCCCzazAz.',
+        '.zgzazcCwCzazgz.',
+        '..z.zaazczaaz.z.',
+        '....zrAaaaArz...',
+        '.....zrAAArz....',
+        '......zrrrz.....',
+        '.....z.zz.z.....',
+        '....z..zz..z....',
+        '.......zz.......',
+        '................',
+        '................']
     }
   };
   function shade(hex, d) { const n = parseInt(hex.slice(1), 16); return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => Math.max(0, Math.min(255, v + d)).toString(16).padStart(2, '0')).join(''); }

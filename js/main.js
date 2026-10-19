@@ -94,38 +94,46 @@ function pauseBattle(on) { if (B.state === 'win' || B.state === 'lose') return; 
 function drawBattleHud() {
   ctx.fillStyle = 'rgba(8,10,24,0.8)'; ctx.fillRect(0, 0, W, 60);
   text(B.stage.name.toUpperCase(), 24, 40, 28, '#fff');
-  text('WAVE ' + Math.max(1, B.wave + 1) + (B.goal.t === 'hold' ? '' : '/' + B.stage.waves.length) + '    ENEMIES ' + (B.enemies.length + B.spawnQ.length), 520, 40, 22, '#80f0ff');
+  if (!B.prol) text('WAVE ' + Math.max(1, B.wave + 1) + (B.goal.t === 'hold' ? '' : '/' + B.stage.waves.length) + '    ENEMIES ' + (B.enemies.length + B.spawnQ.length), 520, 40, 22, '#80f0ff');
   const gl = B.goal;
-  if (gl.t === 'time' || gl.t === 'hold') { const left = Math.max(0, Math.ceil(gl.sec - B.pt)); text((gl.t === 'time' ? 'TIME ' : 'HOLD ') + Math.floor(left / 60) + ':' + ('0' + left % 60).slice(-2), 860, 40, 26, gl.t === 'time' && left <= 15 ? '#ff6060' : '#ffd040'); }
-  text('GOAL: ' + goalShort(gl), 24, 88, 18, '#ffb060');
+  if (gl.t === 'time' || gl.t === 'hold') { const left = Math.max(0, Math.ceil(gl.sec - B.pt)); text((gl.t === 'time' ? 'TIME ' : 'HOLD ') + Math.floor(left / 60) + ':' + ('0' + left % 60).slice(-2), 820, 40, 26, gl.t === 'time' && left <= 15 ? '#ff6060' : '#ffd040'); }
+  if (!B.prol) text('GOAL: ' + goalShort(gl), 24, 88, 18, '#ffb060');
   if (B.bonus) { const bf = bonusFailed(B.bonus), bm = bonusMet(B.bonus); text('BONUS: ' + bonusText(B.bonus) + (bf ? '  (failed)' : bm && B.bonus.t !== 'nodown' && B.bonus.t !== 'noult' ? '  (done)' : ''), 24, 112, 15, bf ? '#e06060' : bm && B.bonus.t !== 'nodown' && B.bonus.t !== 'noult' ? '#8aff9a' : '#c8d8f8'); }
   if (B.prop) { text(B.prop.name, 24, 140, 15, '#40d0ff'); bar(24, 148, 200, 10, B.prop.hp / B.prop.maxhp, '#40d0ff', '#1a2a3a'); }
-  button(1070, 8, 70, 44, 'x' + B.speed, () => { B.speed = B.speed === 1 ? 2 : 1; Snd.play('ui'); }, false, 24);
+  if (!B.prol) button(1070, 8, 70, 44, 'x' + B.speed, () => { B.speed = B.speed === 1 ? 2 : 1; Snd.play('ui'); }, false, 24);
   button(1160, 8, 70, 44, 'II', () => pauseBattle(true), false, 24);
   const boss = B.enemies.find(e => e.def.boss);
   if (boss) { bar(380, 76, 520, 18, boss.hp / boss.maxhp, '#c030c0', '#2a1a2a'); text(boss.def.name, 640, 72, 18, '#fff', 'center'); }
   const mk = B.enemies.find(e => e.mark);
   if (mk) { bar(380, 76, 520, 14, mk.hp / mk.maxhp, '#e03030', '#2a1a1a'); text('TARGET: ' + B.goal.name, 640, 72, 18, '#fff', 'center'); }
-  B.hunters.forEach((h, i) => {
-    const x = 30 + i * 410, y = H - 108, w = 390, ready = h.charge >= 100 && h.alive;
-    ctx.fillStyle = i === B.sel ? '#ffd040' : h.alive ? h.def.col : '#444'; ctx.fillRect(x - 4, y - 4, w + 8, 100);
+  if (B.chain >= 3) text('CHAIN x' + B.chain, 640, 130, 30, '#ffd040', 'center', '#7a2a00');
+  const pro = B.prol, robots = B.hunters.filter(q => !q.isHero);
+  B.hunters.forEach((h, i) => {   // four cards: three robots (ULT) and the hero (SLAM). In the prologue they appear as the robots join
+    const hero = !!h.isHero, x = 16 + (hero ? 3 : robots.indexOf(h)) * 312, y = H - 108, w = 300, alive = h.alive;
+    const k = hero ? 1 - h.slamCd / h.slamMax : h.charge / 100, ready = alive && (hero ? h.slamCd <= 0 : h.charge >= 100), ab = !pro || (hero ? pro.u.slam : pro.u.ult);
+    const pulse = pro && pro.pulseCard === h && !B.selUsed && Math.floor(time * 3) % 2;
+    ctx.fillStyle = pulse ? '#ffffff' : i === B.sel ? '#ffd040' : alive ? h.def.col : '#444'; ctx.fillRect(x - 4, y - 4, w + 8, 100);
     ctx.fillStyle = '#0c0e1c'; ctx.fillRect(x, y, w, 92);
-    faceSprite(h.def.spr, x + 46, y + 8, 2, h.alive ? Math.floor(time * 2) % 2 : 0);
-    text(h.def.name, x + 92, y + 28, 20, h.alive ? '#fff' : '#777');
-    text(h.def.role, x + 262, y + 28, 12, h.alive ? h.def.col : '#555', 'right');
-    bar(x + 92, y + 40, 170, 12, h.hp / h.maxhp, h.hp / h.maxhp < 0.3 ? '#e04040' : '#40d060', '#2a1a1a');
-    bar(x + 92, y + 66, 170, 8, h.charge / 100, ready ? '#ffd040' : '#c070ff', '#2a2a3a');
+    if (hero) { const hs = Art.hero(SAVE.hero, alive ? Math.floor(time * 2) % 2 : 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(hs, 0, 1, 24, 16, x + 7, y + 12, 66, 44); }
+    else faceSprite(h.def.spr, x + 40, y + 8, 2, alive ? Math.floor(time * 2) % 2 : 0);
+    text(hero ? heroName().toUpperCase() : h.def.name, x + 78, y + 28, 17, alive ? '#fff' : '#777');
+    text(h.def.role, x + 208, y + 28, 11, alive ? h.def.col : '#555', 'right');
+    bar(x + 78, y + 40, 130, 12, h.hp / h.maxhp, h.hp / h.maxhp < 0.3 ? '#e04040' : '#40d060', '#2a1a1a');
+    if (ab) bar(x + 78, y + 66, 130, 8, k, ready ? '#ffd040' : '#c070ff', '#2a2a3a');
     // one status line: why the robot is out, what protects it, or how far its ultimate is
-    const stTxt = !h.alive ? 'OFFLINE' : h.shield > 0 ? 'SHIELD ' + Math.ceil(h.shield) + 's' : ready ? 'ULT READY' : 'ULT ' + Math.floor(h.charge) + '%';
-    text(stTxt, x + 92, y + 88, 13, !h.alive ? '#e04040' : h.shield > 0 ? '#8ab0e0' : ready ? '#ffd040' : '#9a8ab8');
-    if (h.alive) text(Math.ceil(h.hp) + '/' + Math.round(h.maxhp), x + 262, y + 88, 13, '#c8d8f8', 'right');
-    ctx.fillStyle = ready ? (Math.floor(time * 6) % 2 ? '#ffd040' : '#fff') : '#2a2c3a'; ctx.fillRect(x + 280, y + 12, 96, 68);
-    if (!ready && h.alive) { const k = clamp(h.charge / 100, 0, 1); ctx.fillStyle = 'rgba(192,112,255,0.45)'; ctx.fillRect(x + 280, y + 12 + Math.round(68 * (1 - k)), 96, Math.round(68 * k)); }   // fills up like a tank
-    ctx.fillStyle = ready ? '#1a1000' : '#8a90a8'; ctx.font = '22px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('ULT', x + 328, y + 40);
-    ctx.font = '12px ' + FONT; ctx.fillText(h.def.ult, x + 328, y + 64); ctx.fillText('[' + (i + 1) + ']', x + 328, y + 21);
-    uiB.push({ x: x + 280, y: y + 12, w: 96, h: 68, fn: () => tryUlt(h) });
-    uiB.push({ x, y, w: 270, h: 92, fn: () => { if (h.alive) { B.sel = i; Snd.play('ui'); tutEvent('sel'); } } });
+    const nm = hero ? 'SLAM' : 'ULT';
+    const stTxt = !alive ? (hero ? 'DOWN ' + Math.ceil(h.down) + 's' : 'OFFLINE') : h.shield > 0 ? 'SHIELD ' + Math.ceil(h.shield) + 's' : ready ? nm + ' READY' : hero ? 'SLAM ' + Math.ceil(h.slamCd) + 's' : 'ULT ' + Math.floor(h.charge) + '%';
+    if (ab) text(stTxt, x + 78, y + 88, 12, !alive ? '#e04040' : h.shield > 0 ? '#8ab0e0' : ready ? '#ffd040' : '#9a8ab8');
+    if (alive) text(Math.ceil(h.hp) + '/' + Math.round(h.maxhp), x + 208, y + 88, 12, '#c8d8f8', 'right');
+    if (!ab) { uiB.push({ x, y, w: 216, h: 92, fn: () => { if (h.alive) { B.sel = i; B.selUsed = true; Snd.play('ui'); tutEvent('sel'); } } }); return; }
+    ctx.fillStyle = ready ? (Math.floor(time * 6) % 2 ? '#ffd040' : '#fff') : '#2a2c3a'; ctx.fillRect(x + 220, y + 12, 70, 68);
+    if (!ready && alive) { const kk = clamp(k, 0, 1); ctx.fillStyle = 'rgba(192,112,255,0.45)'; ctx.fillRect(x + 220, y + 12 + Math.round(68 * (1 - kk)), 70, Math.round(68 * kk)); }   // fills up like a tank
+    ctx.fillStyle = ready ? '#1a1000' : '#8a90a8'; ctx.font = (hero ? 18 : 22) + 'px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(nm, x + 255, y + 40);
+    ctx.font = '11px ' + FONT; ctx.fillText(hero ? 'SHOCKWAVE' : h.def.ult, x + 255, y + 64); ctx.fillText('[' + (i + 1) + ']', x + 255, y + 21);
+    uiB.push({ x: x + 220, y: y + 12, w: 70, h: 68, fn: () => hero ? heroSlam() : tryUlt(h) });
+    uiB.push({ x, y, w: 216, h: 92, fn: () => { if (h.alive) { B.sel = i; B.selUsed = true; Snd.play('ui'); tutEvent('sel'); } } });
   });
+  if (pro) proHud();
   drawTip();   // under the floating combat texts, so results stay readable
   B.ft.forEach(f => text(f.s, f.x * 4, f.y * 4, f.big ? 28 : 20, f.c, 'center'));
   if (B.banner.t > 0) text(B.banner.s, W / 2, 200, 56, '#ffd040', 'center', '#7a2a00');
@@ -141,7 +149,8 @@ function drawBattleHud() {
     ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(0, 0, W, H); text('PAUSED', W / 2, 260, 80, '#ffd040', 'center');
     button(W / 2 - 170, 320, 340, 66, 'RESUME', () => { B.paused = false; }, false, 32);
     button(W / 2 - 170, 404, 340, 66, 'HOW TO PLAY', () => openHelp(), false, 28);
-    button(W / 2 - 170, 488, 340, 66, 'QUIT STAGE', () => { B = null; scene = 'hub'; }, false, 30);
+    if (B.prol) button(W / 2 - 170, 488, 340, 66, 'SKIP PROLOGUE', () => askConfirm('SKIP THE PROLOGUE?', ['You will miss how the robots join you.', 'You can play it again from the hub (PROLOGUE).'], 'SKIP', skipPrologue), false, 26);
+    else button(W / 2 - 170, 488, 340, 66, 'QUIT STAGE', () => { B = null; scene = 'hub'; }, false, 30);
   }
 }
 
@@ -152,6 +161,9 @@ function frame() {
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
   if (scene === 'title') drawTitle();
   else if (scene === 'card') drawCard();
+  else if (scene === 'cut') drawCut();
+  else if (scene === 'world') drawWorld();
+  else if (scene === 'memories') drawMemories();
   else if (scene === 'hub') drawHub();
   else if (scene === 'story') drawStory();
   else if (scene === 'squad') drawSquad();
@@ -190,6 +202,7 @@ function hitButton(touch) {
 cv.addEventListener('pointerdown', e => {
   toXY(e); Snd.init(); try { cv.setPointerCapture(e.pointerId); } catch (er) {}
   if (scene === 'card' && !confirmBox) { advanceCard(); return; }
+  if (scene === 'cut' && !confirmBox) { const cb = hitButton(e.pointerType !== 'mouse'); if (cb) cb.fn(); else cutAdvance(); return; }
   const b = hitButton(e.pointerType !== 'mouse');
   if (b) { b.fn(); return; }
   if (confirmBox) return;
@@ -215,6 +228,7 @@ window.addEventListener('keydown', e => {
   }
   if (k === 'backspace') {
     e.preventDefault(); if (confirmBox) { confirmBox = null; return; }
+    if (scene === 'cut') { if (SC && !SC.ending) askConfirm('SKIP THIS SCENE?', ['The story goes on. Choices take their first option.', 'You can watch it again later under MEMORIES.'], 'SKIP', skipScene); return; }
     if (scene === 'battle' && B) { pauseBattle(true); return; }
     if (scene === 'help') { scene = helpReturn; return; }
     if (scene === 'data') { scene = dataReturn; return; }
@@ -226,10 +240,12 @@ window.addEventListener('keydown', e => {
   if (k === 'm') { Snd.toggle(); toastMsg(Snd.muted ? 'Sound off' : 'Sound on'); return; }
   if (confirmBox) return;
   if (scene === 'card' && (k === 'enter' || k === ' ')) { e.preventDefault(); advanceCard(); return; }
+  if (scene === 'cut') { if (k === 'enter' || k === ' ') { e.preventDefault(); if (!(SC && SC.choice)) cutAdvance(); } else cutKey(k); return; }
   if (scene === 'battle' && B) {
     if (k === 'p') { pauseBattle(!B.paused); return; }
     if (k === 'f') { B.speed = B.speed === 1 ? 2 : 1; return; }
-    if (k >= '1' && k <= '3') { const h = B.hunters[k - 1]; if (h) tryUlt(h); }
+    if (k >= '1' && k <= '3') { const h = B.hunters.filter(q => !q.isHero)[k - 1]; if (h) tryUlt(h); }
+    if (k === '4') heroSlam();
   }
 });
 
@@ -241,6 +257,7 @@ const STEP = 1 / 30, MAX_FRAME = 0.1;
 function loop(t) {
   const raw = clamp((t - last) / 1000, 0, MAX_FRAME); last = t;
   time += raw; toast.t -= raw; if (scene === 'card') cardT += raw;
+  if (scene === 'cut') { try { updateCut(raw); } catch (err) { console.error(err); } }
   try {
     if (scene === 'battle') { const n = Math.max(1, Math.ceil(raw / STEP - 0.05)); for (let i = 0; i < n; i++) updateBattle(raw / n); }
     frame();

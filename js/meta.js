@@ -8,7 +8,7 @@ function initHunter(id) { SAVE.h[id] = newHunterState(); }
 function defaultSave() {
   const s = { gold: 300, onyx: 10, owned: START_HUNTERS.slice(), squad: START_HUNTERS.slice(), h: {}, bag: [], stages: {},
     crates: [{ s: 0, t: 0 }, { s: 0, t: 0 }, { s: 0, t: 0 }], bonus: {}, missions: {}, day: dayKey(), stat: { kills: 0, wins: 0, combos: 0, ults: 0 }, seen: {},
-    hero: Object.assign({}, HERO_DEFAULT), heroDone: false, ending: null, cxSeen: 0, found: {}, disc: {}, tut: {}, tipsOff: false };
+    hero: Object.assign({}, HERO_DEFAULT), heroDone: false, ending: null, cxSeen: 0, found: {}, disc: {}, tut: {}, tipsOff: false, fl: {} };
   crateChoice = null; SAVE = s; START_HUNTERS.forEach(initHunter); MISSIONS.forEach(m => s.missions[m.id] = { p: 0, c: false }); return s;
 }
 let saveWarned = false;
@@ -28,9 +28,10 @@ function loadGame() {
 function newGame() { backupOf(storedRaw()); defaultSave(); saveGame(); heroTyping = false; scene = 'hero'; }
 function confirmHero() {
   SAVE.heroDone = true; heroTyping = false; saveGame(); Snd.play('level');
-  if (!SAVE.seen.intro && progressIdx() === 0) { SAVE.seen.intro = 1; saveGame(); showCards(INTRO_CARDS, () => { scene = 'hub'; }); } else scene = 'hub';
+  const go = () => { if (needsPrologue()) startPrologue(); else scene = 'hub'; };
+  if (!SAVE.seen.intro && progressIdx() === 0) playScene('intro', go); else go();
 }
-function chooseEnding(id) { SAVE.ending = id; SAVE.seen['end'] = 1; saveGame(); Snd.play('win'); showCards(ENDINGS[id], () => { scene = 'hub'; }); }
+function chooseEnding(id) { SAVE.ending = id; SAVE.seen['end'] = 1; saveGame(); Snd.play('win'); playScenes(['end_' + id, 'epilogue'], () => { scene = 'hub'; }); }
 function addGear(g) { if (SAVE.bag.length < BAGMAX) SAVE.bag.push(g); else SAVE.gold += gearValue(g); }
 function stageUnlocked(i) { return i === 0 || SAVE.stages[STAGES[i - 1].id] > 0; }
 function progressIdx() { let n = 0; STAGES.forEach(s => { if (SAVE.stages[s.id]) n++; }); return n; }
@@ -79,7 +80,7 @@ function drawTitle() {
     if (hasSave()) askConfirm('START A NEW GAME?', ['This replaces the save on this device.', 'Your old save is kept as a backup (SAVE DATA > RESTORE BACKUP).'], 'NEW GAME', () => { SAVE = null; newGame(); });
     else newGame();
   }, false, 34);
-  if (hasSave()) button(W / 2 - 170, 424, 340, 68, 'CONTINUE', () => { Snd.init(); if (loadGame()) { scene = SAVE.heroDone ? 'hub' : 'hero'; Snd.play('ui'); } }, false, 34);
+  if (hasSave()) button(W / 2 - 170, 424, 340, 68, 'CONTINUE', () => { Snd.init(); if (loadGame()) { if (!SAVE.heroDone) scene = 'hero'; else if (needsPrologue()) startPrologue(); else scene = 'hub'; Snd.play('ui'); } }, false, 34);
   button(W / 2 - 170, 512, 340, 50, 'SAVE DATA', () => { Snd.init(); openData(); }, false, 24);
   const names = HUNTERS.map(h => h.spr);
   names.forEach((n, i) => smallSprite(n, 150 + i * 140, 705, 3, Math.floor(time * 2 + i) % 2));
@@ -94,7 +95,7 @@ function drawHub() {
   SAVE.squad.forEach((id, i) => { const h = HUNTER_BY[id]; const s = Art.sprite(h.spr, Math.floor(time * 1.5 + i) % 2); lx.drawImage(s, 190 + i * 40 - (s.lw >> 1), 136 - s.lh + 6, s.lw, s.lh); }); lx.imageSmoothingEnabled = false;
   blit(); topBar('HOLLOW CREEK');
   const items = [['STORY', 'story', 0], ['HERO', 'hero', 0], ['SQUAD', 'squad', 0], ['PREP ROOM', 'prep', 0], ['SUPPLY', 'supply', cratesReady()], ['MISSIONS', 'missions', claimable()], ['CODEX', 'codex', Math.max(0, codexCount() - (SAVE.cxSeen || 0))]];
-  if (SAVE.stages.s15 && !SAVE.ending) items.push(['RETURN CONSOLE', 'choice', 0]);
+  if (SAVE.stages[FINAL_STAGE] && !SAVE.ending) items.push(['RETURN CONSOLE', 'choice', 0]);
   items.forEach((it, i) => {
     button(50, 100 + i * 72, 360, 60, it[0], () => { scene = it[1]; Snd.play('ui'); if (it[1] === 'prep') { selBagI = -1; } if (it[1] === 'codex') { SAVE.cxSeen = codexCount(); saveGame(); }
       if (it[1] === 'story') { const n = STAGES.findIndex(s => !SAVE.stages[s.id]); selStage = n < 0 ? STAGES.length - 1 : n; selCh = STAGES[selStage].ch; } }, false, 30);
@@ -102,6 +103,9 @@ function drawHub() {
   });
   button(1050, 100, 190, 52, 'HOW TO PLAY', () => openHelp(), false, 20);
   button(1050, 168, 190, 52, 'SAVE DATA', () => openData(), false, 22);
+  button(1050, 236, 190, 52, 'PROLOGUE', () => { Snd.play('ui'); startPrologue(true); }, false, 22);
+  button(1050, 304, 190, 52, 'THE DUST', () => { worldSel = Math.max(0, STAGES.findIndex(q => !SAVE.stages[q.id])); scene = 'world'; Snd.play('ui'); }, false, 22);
+  button(1050, 372, 190, 52, 'MEMORIES', () => { scene = 'memories'; Snd.play('ui'); }, false, 22);
   if (hubLine === null) hubLine = pickHubLine();
   if (hubLine) {   // the squad comments on what has happened so far
     const m = /^([A-Z][A-Z0-9\- ]*[A-Z0-9]):/.exec(hubLine), ls = wrap(hubLine, 560, 20).slice(0, 2);
@@ -116,6 +120,7 @@ function drawHub() {
 function drawStory() {
   hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.55)'; ctx.fillRect(0, 70, W, H - 70); topBar('STORY');
   text('CHAPTER ' + selCh + ': ' + CHAPTERS[selCh], 40, 112, 28, '#80f0ff');
+  text(CHAPTER_INFO[selCh].fam + ': ' + CHAPTER_INFO[selCh].t, 40, 138, 15, CHAPTER_INFO[selCh].col);
   const chFirst = c => STAGES.findIndex(s => s.ch === c), chMax = Math.max.apply(null, STAGES.map(s => s.ch));
   button(760, 84, 54, 40, '<', () => { selCh--; selStage = chFirst(selCh); Snd.play('ui'); }, selCh <= 1, 26);
   button(826, 84, 54, 40, '>', () => { selCh++; selStage = chFirst(selCh); Snd.play('ui'); }, selCh >= chMax || !stageUnlocked(chFirst(selCh + 1)), 26);
@@ -147,7 +152,7 @@ function drawStory() {
   text('WAVES: ' + s.waves.length, 420, 640, 18, '#c8d8f8');
   button(540, 650, 240, 50, 'START', () => {
     if (SAVE.squad.length !== 3) return; Snd.play('ui'); const st = STAGES[selStage], idx = selStage;
-    if (st.pre && !SAVE.seen['pre' + st.id]) { SAVE.seen['pre' + st.id] = 1; saveGame(); showCard(st.pre, () => startBattle(idx)); } else startBattle(idx);
+    if ((hasStageScene('pre', st) || st.pre) && !SAVE.seen['pre' + st.id]) playStageScene('pre', st, () => startBattle(idx)); else startBattle(idx);
   }, !stageUnlocked(selStage) || SAVE.squad.length !== 3, 28);
   // squad strip
   panel(830, 330, 410, 380, '#80f0ff'); text('YOUR SQUAD', 856, 366, 22, '#80f0ff');
@@ -156,12 +161,16 @@ function drawStory() {
 }
 
 // ---------- squad ----------
+let coachStep = 0;   // first visit after the prologue: 1 = take a robot out, 2 = put it back
 function drawSquad() {
   hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.7)'; ctx.fillRect(0, 70, W, H - 70); topBar('SQUAD');
-  text('TAP A ROBOT TO ADD OR REMOVE IT. YOU NEED 3.', 40, 112, 22, '#80f0ff');
+  if (coachStep === 1 && SAVE.squad.length < 3) coachStep = 2;
+  if (coachStep === 2 && SAVE.squad.length === 3) { coachStep = 0; SAVE.seen.coach = 1; saveGame(); toastMsg('Three slots. More robots wake up as you clear stages.'); }
+  text(coachStep === 1 ? 'THIS IS YOUR SQUAD: THREE SLOTS. TAP A ROBOT IN A GOLD FRAME TO TAKE IT OUT.' : coachStep === 2 ? 'NOW TAP IT AGAIN TO PUT IT BACK. A SQUAD NEEDS THREE.' : 'TAP A ROBOT TO ADD OR REMOVE IT. YOU NEED 3.', 40, 112, 22, coachStep ? '#ffd040' : '#80f0ff');
   HUNTERS.forEach((h, i) => {
     const x = 40 + (i % 4) * 190, y = 140 + Math.floor(i / 4) * 250, own = SAVE.owned.indexOf(h.id) >= 0, inSq = SAVE.squad.indexOf(h.id) >= 0;
-    ctx.fillStyle = inSq ? '#ffd040' : own ? h.col : '#333'; ctx.fillRect(x - 4, y - 4, 178, 238);
+    const pul = coachStep && own && (coachStep === 1 ? inSq : !inSq) && Math.floor(time * 3) % 2;
+    ctx.fillStyle = pul ? '#ffffff' : inSq ? '#ffd040' : own ? h.col : '#333'; ctx.fillRect(x - 4, y - 4, 178, 238);
     ctx.fillStyle = '#12141f'; ctx.fillRect(x, y, 170, 230);
     if (own) {
       smallSprite(h.spr, x + 85, y + 134, 3, Math.floor(time * 1.5 + i) % 2); text(h.name, x + 85, y + 150, 22, '#fff', 'center'); text(h.role, x + 85, y + 174, 16, h.col, 'center');
@@ -236,7 +245,7 @@ function drawPrep() {
 // ---------- supply ----------
 let crateChoice = null;   // pick-of-three offer: { opts: [gear, gear, gear] }
 function openCrate(c, i) {
-  const pi = progressIdx(), gold = Math.round((80 + i * 60) * (1 + pi * 0.12)), on = 3 + i * 3;
+  const pi = progressIdx() * 14 / (STAGES.length - 1), gold = Math.round((80 + i * 60) * (1 + pi * 0.12)), on = 3 + i * 3;   // pi: progress on the old 15-stage scale
   SAVE.gold += gold; SAVE.onyx += on; let gt = '';
   const gearWon = Math.random() < 0.3 + 0.15 * i || (i === 2 && hasPerk('pick3'));
   if (gearWon && hasPerk('pick3')) { crateChoice = { opts: [genGear(pi, i), genGear(pi, i), genGear(pi, i)] }; gt = '  - choose 1 piece'; }
@@ -331,7 +340,7 @@ function drawResult() {
     nextHints().forEach((l, i) => text(l, 640, 600 + i * 20, 15, '#80f0ff', 'center'));
   }
   // the story card for a first win plays when the player leaves the result screen; after the last fight the ending choice follows
-  const leave = fn => { const o = r.outro, last = r.final; r.outro = null; r.final = false; const done = last ? () => { scene = 'choice'; } : fn; B = null; if (o) showCard(o, done); else done(); };
+  const leave = fn => { const o = r.outro, last = r.final; r.outro = null; r.final = false; const done = last ? () => { scene = 'choice'; } : fn; B = null; if (o) playStageScene('post', stageById(o), done); else done(); };
   button(330, 652, 190, 44, 'HOME', () => { leave(() => { scene = 'hub'; }); }, false, 22);
   button(540, 652, 190, 44, 'RETRY', () => { const i = B.idx; leave(() => startBattle(i)); }, false, 22);
   if (r.win && B.idx + 1 < STAGES.length) button(750, 652, 200, 44, 'NEXT', () => { const i = B.idx + 1; leave(() => { selStage = i; selCh = STAGES[i].ch; scene = 'story'; }); }, false, 22);

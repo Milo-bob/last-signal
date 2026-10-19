@@ -7,6 +7,7 @@
 const SAVE_KEY = 'lastsignal_save', BACKUP_KEY = 'lastsignal_backup', BROKEN_KEY = 'lastsignal_save_broken';
 const SAVE_FORMAT = 1, SAVE_MAX_BYTES = 512 * 1024, SAVE_MAXNUM = 1e9;
 const GEAR_SLOTS = ['weapon', 'armor', 'core'];
+const LEGACY_STAGES = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10', 's11', 's12', 's13', 's14', 's15'];   // the 15 stages of the first version
 
 class SaveError extends Error {}
 function bad(msg) { throw new SaveError(msg); }
@@ -96,13 +97,18 @@ function cleanSave(raw, strict) {
   // story progress
   out.stages = {};
   const sRaw = obj(raw.stages, 'stages', true) || {};
+  let last = -1;
   STAGES.forEach((s, i) => {
     if (sRaw[s.id] === undefined) return;
     const v = int(sRaw[s.id], 0, 3, 0, 'stage ' + s.id, true);
-    if (v > 0) {
-      if (strict && i > 0 && !(out.stages[STAGES[i - 1].id] > 0)) bad('Stage ' + s.id + ' is cleared but the stage before it is not.');
-      out.stages[s.id] = v;
-    }
+    if (v > 0) { out.stages[s.id] = v; last = i; }
+  });
+  // Stages that were added to the story after the first release (everything outside LEGACY_STAGES) count as cleared once a later stage is cleared.
+  // A gap among the original stages is not accepted in an import.
+  STAGES.forEach((s, i) => {
+    if (i >= last || out.stages[s.id] > 0) return;
+    if (LEGACY_STAGES.indexOf(s.id) < 0) out.stages[s.id] = 1;
+    else if (strict) bad('A later stage is cleared but the stage before it (' + s.id + ') is not.');
   });
   const bRaw = obj(raw.bonus, 'bonus', false) || {}; out.bonus = {}; STAGES.forEach(s => { if (s.bonus && bRaw[s.id]) out.bonus[s.id] = 1; });
   out.ending = raw.ending === undefined || raw.ending === null ? null : raw.ending;
@@ -128,9 +134,12 @@ function cleanSave(raw, strict) {
   out.stat = {}; ['kills', 'wins', 'combos', 'ults'].forEach(k => { out.stat[k] = int(stRaw[k], 0, SAVE_MAXNUM, 0, 'stat ' + k, true); });
 
   // flags the game keeps about what the player has seen or found
-  const seenRaw = obj(raw.seen, 'seen', false) || {}, seenKeys = ['intro', 'end'];
+  const seenRaw = obj(raw.seen, 'seen', false) || {}, seenKeys = ['intro', 'end', 'prologue', 'coach'];
   STAGES.forEach(s => { seenKeys.push('pre' + s.id, 'post' + s.id); });
+  Object.keys(SCENES).forEach(id => seenKeys.push(sceneKey(id)));   // every cutscene keeps its own 'seen' flag
   out.seen = {}; seenKeys.forEach(k => { if (seenRaw[k]) out.seen[k] = 1; });
+  const flRaw = obj(raw.fl, 'fl', false) || {}; out.fl = {};   // story choices (FLAG_DEFS in scenes.js)
+  Object.keys(FLAG_DEFS).forEach(k => { const v = flRaw[k]; if (v === undefined || v === null) return; if (typeof v === 'string' && FLAG_DEFS[k].indexOf(v) >= 0) out.fl[k] = v; else if (strict) bad('The story choice "' + k + '" is not valid.'); });
   const fRaw = obj(raw.found, 'found', false) || {}; out.found = {}; Object.keys(FINDS).forEach(k => { if (fRaw[k]) out.found[k] = 1; });
   const dRaw = obj(raw.disc, 'disc', false) || {}; out.disc = {}; Object.keys(FOES).forEach(k => { if (dRaw[k]) out.disc[k] = 1; });
   const tRaw = obj(raw.tut, 'tut', false) || {}; out.tut = {}; Object.keys(TIPS).forEach(k => { if (tRaw[k] !== undefined) out.tut[k] = int(tRaw[k], 0, TIP_DONE, 0, 'tip ' + k, false); });

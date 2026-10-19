@@ -19,6 +19,8 @@ const HUNTERS = [
     desc: 'Builds auto-turrets from scrap every few seconds.', ult: 'DRONE SWARM', ultDesc: 'Four combat drones attack for 6s.', col: '#5a9a4a' }
 ];
 const HUNTER_BY = {}; HUNTERS.forEach(h => HUNTER_BY[h.id] = h);
+// the player's hero fights next to the squad (stats come from the squad level, see heroUnit in battle.js)
+const HERO_DEF = { id: 'hero', name: 'HERO', role: 'HERO', melee: true, col: '#ffffff', ult: 'SLAM', spr: null };
 const START_HUNTERS = ['bulwark', 'sight', 'mender'];
 
 const FOES = {
@@ -29,7 +31,11 @@ const FOES = {
   brute: { name: 'Breaker', hp: 380, atk: 26, spd: 16, r: 11, melee: true, spr: 'brute', xp: 3 },
   boss: { name: 'GIANT HAND', hp: 2400, atk: 30, spd: 0, r: 22, boss: true, spr: 'boss', xp: 10, call: 'THE HAND CALLS THE RIDERS', add: 'raider' },
   walker: { name: 'VANCE WALKER', hp: 2800, atk: 32, spd: 0, r: 22, boss: true, spr: 'walker', xp: 10, call: 'THE BLUE COATS CHARGE', add: 'gunner' },
-  warden: { name: 'WARDEN-1', hp: 3000, atk: 34, spd: 0, r: 22, boss: true, spr: 'warden', xp: 10, call: 'WARDEN-1 CALLS THE DRONES', add: 'drone' }
+  warden: { name: 'WARDEN-1', hp: 3000, atk: 34, spd: 0, r: 22, boss: true, spr: 'warden', xp: 10, call: 'WARDEN-1 CALLS THE DRONES', add: 'drone' },
+  hound: { name: 'Seal Hound', hp: 40, atk: 8, spd: 56, r: 6, melee: true, spr: 'hound', xp: 1 },
+  welder: { name: 'Dalton Welder', hp: 100, atk: 13, spd: 22, r: 7, range: 46, rate: 1.0, spr: 'welder', xp: 2 },
+  judge: { name: 'THE JUDGE', hp: 2200, atk: 28, spd: 0, r: 22, boss: true, spr: 'judge', xp: 10, call: 'THE COURT IS IN SESSION', add: 'gunner' },
+  sentinel: { name: 'HALCYON SENTINEL', hp: 3600, atk: 36, spd: 0, r: 22, boss: true, spr: 'sentinel', xp: 10, call: 'THE SENTINEL LAUNCHES ITS DRONES', add: 'drone', multi: 3 }
 };
 
 // ---------- gear ----------

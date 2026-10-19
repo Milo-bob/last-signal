@@ -59,7 +59,7 @@ function drawHero() {
 // ---------- codex ----------
 function drawCodex() {
   hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.82)'; ctx.fillRect(0, 70, W, H - 70); topBar('CODEX');
-  CODEX_CATS.forEach((c, i) => opt(40 + i * 200, 84, 190, 44, c, cxCat === i, () => { cxCat = i; cxSel = 0; Snd.play('ui'); }, false, 20));
+  CODEX_CATS.forEach((c, i) => opt(40 + i * 172, 84, 164, 44, c, cxCat === i, () => { cxCat = i; cxSel = 0; Snd.play('ui'); }, false, 19));
   const list = CODEX.filter(e => e.cat === CODEX_CATS[cxCat]);
   panel(40, 150, 360, 530, '#80f0ff');
   list.forEach((e, i) => {
@@ -104,4 +104,82 @@ function drawChoice() {
     button(x + 115, 540, 300, 58, 'CHOOSE', () => chooseEnding(p[0]), false, 28);
   });
   text('Your squad will remember either way.', W / 2, 670, 20, '#8890b0', 'center');
+}
+
+// ---------- world map: the Families, their ground, and what they think of you ----------
+let worldSel = 0, worldFam = 0;
+const FAMILIES = [
+  { id: 'vance', name: 'VANCE SYNDICATE', col: '#7a9af0', who: 'ezra', at: 's1', ch: 1,
+    holds: 'Fuel, the Dead Rail, the Tribunal\'s pay, a hundred blue coats.', wants: 'Every Seal, and a name for every drowned town.' },
+  { id: 'crows', name: 'SABLE CROWS', col: '#c090f0', who: 'corva', at: 's5', ch: 2,
+    holds: 'The couriers, the brokers and the market. Their wagons cross every line.', wants: 'To stay needed. Never to be asked what they sold.' },
+  { id: 'dalton', name: 'DALTON COMBINE', col: '#f0a050', who: 'ma', at: 's6', ch: 3,
+    holds: 'Scrap, steel and the Rust Riders. Everything the Ark was built from.', wants: 'To be left alone, and to have her son back.' },
+  { id: 'calloway', name: 'HOUSE CALLOWAY', col: '#80c8ff', who: 'calloway', at: 's3', ch: 5,
+    holds: 'The dam, the reservoir bed and the daily ration line.', wants: 'The old man: a ship that left. His granddaughter: the truth.' }
+];
+function famStanding(f) {
+  const fl = k => (SAVE.fl && SAVE.fl[k]) || '';
+  if (f.id === 'vance') return cleared('s12') ? (fl('ezra') === 'mercy' ? 'Spared. Ezra walked away.' : fl('ezra') === 'cold' ? 'Broken. Ezra was left in the dust.' : 'Beaten.') : cleared('s17') ? 'Hunting you. The Tribunal is broken.' : 'Hostile. They burned Willow Fork.';
+  if (f.id === 'crows') return cleared('s19') ? (fl('crow') === 'debt' ? 'You owe Corva a favour, and she knows it.' : 'Square. You owe the Crows nothing.') : 'Neutral. Everything has a price.';
+  if (f.id === 'dalton') return cleared('s21') ? (fl('jonah') === 'promise' ? 'Allies. You promised to bring Jonah\'s Seal home.' : 'Allies, for now.') : cleared('s20') ? 'Respect, the Yard kind.' : 'Neutral on principle.';
+  return cleared('s14') ? 'Dessa knows what her house did.' : cleared('s26') ? (fl('dessa') === 'honest' ? 'Dessa trusts you with the truth.' : fl('dessa') === 'hidden' ? 'Dessa trusts you. She should not yet.' : 'Dessa watches the line.') : 'Unknown. Their gate is closed.';
+}
+function drawWorld() {
+  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.88)'; ctx.fillRect(0, 70, W, H - 70); topBar('THE DUST');
+  const mx = 30, my = 92; ctx.imageSmoothingEnabled = false; ctx.drawImage(Back.scene('worldmap'), mx, my, 640, 360);
+  ctx.strokeStyle = '#80f0ff'; ctx.lineWidth = 4; ctx.strokeRect(mx - 2, my - 2, 644, 364);
+  const rg = (t, x, y, c) => text(t, mx + x * 2, my + y * 2, 14, c || '#c8d0e8', 'center');
+  rg('HOLLOW CREEK', 27, 112); rg('DEAD RAIL', 96, 62, '#a8a8c0'); rg('SABLE MARKET', 147, 108, '#c090f0'); rg('WRECK YARD', 92, 140, '#f0a050'); rg('DUST SEA', 232, 168, '#e8c880'); rg('LOWER FORK', 222, 70, '#a09080'); rg('CALLOWAY DAM', 286, 74, '#80c8ff'); rg('LAUNCH RAIL', 214, 34, '#a8a8c0');
+  const nextI = STAGES.findIndex(q => !SAVE.stages[q.id]);
+  STAGES.forEach((st, i) => {
+    const l = STAGE_LOC[st.id]; if (!l) return; const x = mx + l[0] * 2, y = my + l[1] * 2, done = SAVE.stages[st.id] > 0, ok = stageUnlocked(i), col = CHAPTER_INFO[st.ch].col, r = st.boss ? 9 : 6;
+    ctx.fillStyle = '#000'; ctx.fillRect(x - r - 2, y - r - 2, r * 2 + 4, r * 2 + 4);
+    ctx.fillStyle = i === worldSel ? '#ffd040' : done ? col : ok ? '#e8f0ff' : '#3a3a4a'; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    if (!done) { ctx.fillStyle = ok ? '#0a0e1c' : '#1a1a24'; ctx.fillRect(x - r + 3, y - r + 3, r * 2 - 6, r * 2 - 6); }
+    if (i === nextI && Math.floor(time * 3) % 2) { ctx.strokeStyle = '#ffd040'; ctx.lineWidth = 3; ctx.strokeRect(x - r - 5, y - r - 5, r * 2 + 10, r * 2 + 10); }
+    uiB.push({ x: x - 10, y: y - 10, w: 20, h: 20, fn: () => { worldSel = i; Snd.play('ui'); } });
+  });
+  const st = STAGES[worldSel], ok = stageUnlocked(worldSel);
+  panel(30, 470, 640, 220, CHAPTER_INFO[st.ch].col);
+  text(st.name.toUpperCase(), 54, 512, 28, '#ffd040'); text('CH ' + st.ch + '  ' + CHAPTER_INFO[st.ch].fam, 646, 512, 15, CHAPTER_INFO[st.ch].col, 'right');
+  wrap(ok ? st.brief : 'Not reachable yet. Finish the stage before it.', 590, 18).slice(0, 3).forEach((l, i) => text(l, 54, 548 + i * 24, 18, '#d8e4ff'));
+  text(SAVE.stages[st.id] ? 'CLEARED' : ok ? 'OPEN' : 'LOCKED', 54, 640, 18, SAVE.stages[st.id] ? '#8aff9a' : ok ? '#ffd040' : '#667');
+  button(430, 628, 220, 46, 'OPEN IN STORY', () => { selStage = worldSel; selCh = st.ch; scene = 'story'; Snd.play('ui'); }, !ok, 20);
+  // families
+  FAMILIES.forEach((f, i) => { const known = cleared(f.at); opt(700 + (i % 2) * 275, 92 + Math.floor(i / 2) * 56, 265, 48, known ? f.name : '???', worldFam === i, () => { worldFam = i; Snd.play('ui'); }, !known, 16); });
+  const f = FAMILIES[worldFam];
+  panel(700, 216, 540, 474, cleared(f.at) ? f.col : '#3a3a4a');
+  if (!cleared(f.at)) { text('You have not met them yet.', 730, 270, 22, '#667'); return; }
+  ctx.imageSmoothingEnabled = false; const sp = Art.sprite(f.who, Math.floor(time * 1.5) % 2); ctx.drawImage(sp, 1090, 236, 120, 120);
+  text(f.name, 730, 262, 28, f.col);
+  text('GROUND', 730, 308, 14, '#80f0ff'); wrap(CHAPTER_INFO[f.ch].t, 330, 17).forEach((l, i) => text(l, 730, 332 + i * 22, 17, '#d8e4ff'));
+  text('HOLDS', 730, 410, 14, '#80f0ff'); wrap(f.holds, 480, 18).forEach((l, i) => text(l, 730, 434 + i * 24, 18, '#d8e4ff'));
+  text('WANTS', 730, 500, 14, '#80f0ff'); wrap(f.wants, 480, 18).forEach((l, i) => text(l, 730, 524 + i * 24, 18, '#d8e4ff'));
+  text('TOWARD YOU', 730, 590, 14, '#ffd040'); wrap(famStanding(f), 480, 20).forEach((l, i) => text(l, 730, 616 + i * 26, 20, '#fff'));
+}
+
+// ---------- memories: replay the scenes you have seen ----------
+let memCh = 1;
+function drawMemories() {
+  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.88)'; ctx.fillRect(0, 70, W, H - 70); topBar('MEMORIES');
+  const tabs = Object.keys(CHAPTERS).map(Number).concat([0]);
+  tabs.forEach((c, i) => opt(40 + i * 172, 84, 164, 40, c ? 'CH ' + c : 'OTHER', memCh === c, () => { memCh = c; Snd.play('ui'); }, false, 19));
+  text('Scenes you have seen. Watching them again changes nothing in your save.', 40, 160, 18, '#8890b0');
+  const back = () => { scene = 'memories'; };
+  const row = (y, title, ok, fn) => {
+    panel(40, y, 1200, 46, ok ? '#80f0ff' : '#2a2c3a'); text(ok ? title : '???', 64, y + 31, 22, ok ? '#fff' : '#4a4e60');
+    button(1020, y + 6, 190, 34, 'WATCH', fn, !ok, 18);
+  };
+  if (memCh === 0) {
+    [['The Waking', 'intro'], ['Hollow Creek', 'prologue_end'], ['The Rain', 'end_rain'], ['The Departure', 'end_ascend'], ['The Epilogue', 'epilogue']].forEach((p, i) =>
+      row(190 + i * 62, p[0], !!SAVE.seen[sceneKey(p[1])] && !!SCENES[p[1]], () => playScene(p[1], back, { replay: true })));
+    return;
+  }
+  STAGES.filter(q => q.ch === memCh).forEach((st, i) => {
+    const y = 190 + i * 56, pre = hasStageScene('pre', st) && SAVE.seen['pre' + st.id], post = hasStageScene('post', st) && SAVE.seen['post' + st.id];
+    panel(40, y, 1200, 46, pre || post ? '#80f0ff' : '#2a2c3a'); text(pre || post ? st.name.toUpperCase() : '???', 64, y + 31, 22, pre || post ? '#fff' : '#4a4e60');
+    button(780, y + 6, 200, 34, 'BEFORE', () => playStageScene('pre', st, back, { replay: true }), !pre, 18);
+    button(1000, y + 6, 200, 34, 'AFTER', () => playStageScene('post', st, back, { replay: true }), !post, 18);
+  });
 }
