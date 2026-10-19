@@ -248,7 +248,7 @@ function restoreBackup() {
 }
 function resetProgress() {
   askConfirm('RESET ALL PROGRESS?', ['This deletes your hero, robots, gear, story progress and codex on this device.', 'A backup of the current save is kept, so RESTORE BACKUP can undo it.'], 'YES, RESET',
-    () => { backupOf(storedRaw()); try { localStorage.removeItem(SAVE_KEY); } catch (e) {} SAVE = null; dataStatus = null; scene = 'title'; toastMsg('Progress reset.'); }, true);
+    () => { backupOf(storedRaw()); try { localStorage.removeItem(SAVE_KEY); } catch (e) {} if (Account.on) Account.deleteCloud(); SAVE = null; dataStatus = null; scene = 'title'; toastMsg('Progress reset.'); }, true);
 }
 
 // ---------- the SAVE DATA screen ----------

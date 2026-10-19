@@ -23,11 +23,12 @@ function angDiff(a, b) { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; wh
 // ---------- audio (all synthesized, no files) ----------
 const Snd = (function () {
   let ac = null, master = null, muted = false;
+  try { muted = localStorage.getItem('last-signal-muted') === '1'; } catch (e) {}
   function init() {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
     try {
       ac = new (window.AudioContext || window.webkitAudioContext)();
-      master = ac.createGain(); master.gain.value = 0.45; master.connect(ac.destination);
+      master = ac.createGain(); master.gain.value = muted ? 0 : 0.45; master.connect(ac.destination);
     } catch (e) { ac = null; }
   }
   const noiseBufs = {};   // one fading noise buffer per duration instead of a new one for every shot
@@ -85,7 +86,7 @@ const Snd = (function () {
   return {
     init,
     play(n) { if (!ac || muted) return; try { S[n] && S[n](); } catch (e) {} },
-    toggle() { muted = !muted; return muted; },
+    toggle() { muted = !muted; if (master) master.gain.value = muted ? 0 : 0.45; try { localStorage.setItem('last-signal-muted', muted ? '1' : '0'); } catch (e) {} return muted; },
     get muted() { return muted; }
   };
 })();

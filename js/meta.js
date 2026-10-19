@@ -13,7 +13,7 @@ function defaultSave() {
 }
 let saveWarned = false;
 function saveGame() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); Account.dirty(); }
   catch (e) { if (!saveWarned) { saveWarned = true; toastMsg('Progress could not be stored: the browser blocks or has no room for saves.'); } }
 }
 function hasSave() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
@@ -63,6 +63,7 @@ function topBar(title, backFn) {   // backFn: show BACK (calls it) instead of HO
     ctx.drawImage(Art.sprite('gear_core', 0), 760, 18, 36, 36); text(String(SAVE.onyx), 806, 48, 28, '#80f0ff');
     disc(ctx, 940, 36, 12, '#ffd040'); ctx.fillStyle = '#ffd040'; text(String(SAVE.gold), 966, 48, 28, '#ffd040');
   }
+  muteButton(1072, 13);
   if (backFn) button(1130, 12, 120, 46, 'BACK', backFn, false, 22);
   else button(1130, 12, 120, 46, 'HOME', () => { scene = 'hub'; Snd.play('ui'); }, scene === 'hub', 22);
 }
@@ -83,15 +84,18 @@ function drawGearIcon(g, x, y, sz) {
 function drawTitle() {
   lx.drawImage(Art.hub(), 0, 0); blit();
   ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 0, W, H);
+  muteButton(W - 70, 20);
   text('LAST SIGNAL', W / 2, 190, 110, '#e8f4ff', 'center', '#1a4a8a');
   text('A WILD WEST ROBOT APOCALYPSE', W / 2, 238, 28, '#80f0ff', 'center');
   button(W / 2 - 170, 330, 340, 68, 'NEW GAME', () => {
     Snd.init(); Snd.play('ui');
-    if (hasSave()) askConfirm('START A NEW GAME?', ['This replaces the save on this device.', 'Your old save is kept as a backup (SAVE DATA > RESTORE BACKUP).'], 'NEW GAME', () => { SAVE = null; newGame(); });
+    if (hasSave()) askConfirm('START A NEW GAME?', ['This replaces the save on this device' + (Account.on ? ' and in the cloud.' : '.'), 'Your old save is kept as a backup (SAVE DATA > RESTORE BACKUP).'], 'NEW GAME', () => { SAVE = null; newGame(); });
     else newGame();
   }, false, 34);
   if (hasSave()) button(W / 2 - 170, 424, 340, 68, 'CONTINUE', () => { Snd.init(); if (loadGame()) { if (!SAVE.heroDone) scene = 'hero'; else if (needsPrologue()) startPrologue(); else scene = 'hub'; Snd.play('ui'); } }, false, 34);
-  button(W / 2 - 170, 512, 340, 50, 'SAVE DATA', () => { Snd.init(); openData(); }, false, 24);
+  Account.menuTick();
+  button(W / 2 - 170, 512, 165, 50, 'SAVE DATA', () => { Snd.init(); openData(); }, false, 20);
+  button(W / 2 + 5, 512, 165, 50, Account.on ? 'CLOUD: ' + Account.meta.name.toUpperCase().slice(0, 8) : 'ACCOUNT', () => { Snd.init(); Snd.play('ui'); Account.open(); }, false, 20, Account.on ? '#8aff9a' : null);
   const names = HUNTERS.map(h => h.spr);
   const sp = Math.min(140, 1180 / names.length);
   names.forEach((n, i) => smallSprite(n, W / 2 - (names.length - 1) * sp / 2 + i * sp, 705, 3, Math.floor(time * 2 + i) % 2));

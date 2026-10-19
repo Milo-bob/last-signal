@@ -81,6 +81,15 @@ function scrollDragTo(py) {
   const th = Math.max(36, a.h * a.h / (a.h + a.max)), span = a.h - th;
   scrollOff[scrollDrag.key] = Math.max(0, Math.min(a.max, Math.round((py - a.y - scrollDrag.grab) / span * a.max)));
 }
+// speaker button (mute / unmute): drawn in the top bar, the battle HUD and on the title screen
+function muteButton(x, y) {
+  button(x, y, 46, 44, '', () => { Snd.toggle(); toastMsg(Snd.muted ? 'Sound off' : 'Sound on'); }, false, 20);
+  const m = Snd.muted; ctx.fillStyle = '#06101a';
+  ctx.fillRect(x + 11, y + 17, 6, 10); ctx.beginPath(); ctx.moveTo(x + 17, y + 17); ctx.lineTo(x + 25, y + 11); ctx.lineTo(x + 25, y + 33); ctx.lineTo(x + 17, y + 27); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = m ? '#c01818' : '#06101a'; ctx.lineWidth = 3; ctx.beginPath();
+  if (m) { ctx.moveTo(x + 29, y + 16); ctx.lineTo(x + 39, y + 28); ctx.moveTo(x + 39, y + 16); ctx.lineTo(x + 29, y + 28); } else { ctx.arc(x + 25, y + 22, 8, -0.9, 0.9); }
+  ctx.stroke();
+}
 // modal question; while it is open only its two buttons react
 function askConfirm(title, lines, yes, fn, danger) { confirmBox = { title, lines, yes, fn, danger: !!danger }; }
 function drawConfirm() {
@@ -129,7 +138,7 @@ function drawBattleHud() {
   if (B.bonus) { const bf = bonusFailed(B.bonus), bm = bonusMet(B.bonus); text('BONUS: ' + bonusText(B.bonus) + (bf ? '  (failed)' : bm && B.bonus.t !== 'nodown' && B.bonus.t !== 'noult' ? '  (done)' : ''), 24, 112, 15, bf ? '#e06060' : bm && B.bonus.t !== 'nodown' && B.bonus.t !== 'noult' ? '#8aff9a' : '#c8d8f8'); }
   if (B.prop) { text(B.prop.name, 24, 140, 15, '#40d0ff'); bar(24, 148, 200, 10, B.prop.hp / B.prop.maxhp, '#40d0ff', '#1a2a3a'); }
   if (!B.prol) button(1070, 8, 70, 44, 'x' + B.speed, () => { B.speed = B.speed === 1 ? 2 : 1; Snd.play('ui'); }, false, 24);
-  button(1160, 8, 70, 44, 'II', () => pauseBattle(true), false, 24);
+  button(1160, 8, 70, 44, 'II', () => pauseBattle(true), false, 24); muteButton(1012, 8);
   const boss = B.enemies.find(e => e.def.boss);
   if (boss) { bar(380, 76, 520, 18, boss.hp / boss.maxhp, '#c030c0', '#2a1a2a'); text(boss.def.name, 640, 72, 18, '#fff', 'center'); }
   const mk = B.enemies.find(e => e.mark);
