@@ -217,6 +217,15 @@
     say('MENDER', 'Letters. Hundreds of them. "Dear Mama." "Dear Tomas." "If you are reading this, the water is better where I am."'),
     say('CORVA', 'Mail is the only thing that still crosses every Family\'s line. Nobody dares touch a Crow wagon. Nobody but a fool, or a Dalton.'),
     { k: 'say', who: '', text: ['{HERO} knows the weight of undelivered mail. The last letter {HERO} carried for House Calloway never arrived, either.'], o: 'courier' },
+    act('rose', 'rose', 262, 130, -1), emo('rose', '!', 1), go('rose', 214, 128, 1.4),
+    say('ROSE', 'Two on the left, three on the right, and the Riders ran off with my hat. Did anyone count? I counted. Nobody touches a Crow wagon while I ride shotgun.'),
+    say('CORVA', 'Rose has ridden my roads for nine years. She has never lost a letter, and never opened one. A short list of virtues, and I pay for every one.'),
+    say('ROSE', 'I read the addresses, Corva. Never the letters. But I carry a bag of them that never found a door, and I am tired of being a very fast way to deliver bad news.'),
+    say('CORVA', 'You are leaving.'),
+    say('ROSE', 'I am riding where the mail goes, and today the mail goes wherever these people go. The Dalton road. The dam. Somebody has to hand the last letters over.'),
+    say('CORVA', 'A Crow never lets a good rider go. She lends her. Consider it a loan with no interest, Keyholder. It is the only kind I have ever offered.'),
+    say('MENDER', 'She reads every address aloud when she thinks nobody is listening. I like her already.'),
+    sys('[ ROSE HAS JOINED THE SQUAD ]'),
     say('CORVA', 'Take the north fork. Ask for Ma Dalton and say that Corva says the account is settled. She will laugh. Let her.'),
     say('CORVA', 'And do come to the auction tomorrow night. I have a lot you may want to see.')
   ];

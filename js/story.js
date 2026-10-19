@@ -31,7 +31,7 @@ function heroName() { return (typeof SAVE !== 'undefined' && SAVE && SAVE.hero) 
 // ---------- speakers and line resolving ----------
 const SPEAK = {
   '{HERO}': '#ffffff', SIGHT: '#e0b060', BULWARK: '#8aaae0', MENDER: '#e8f0e8', EMBER: '#ff9a50', FROST: '#8af0ff', ARC: '#ffe040',
-  BLADE: '#c090f0', SCRAPPER: '#80d070', 'EZRA VANCE': '#7a9af0', 'OLD CALLOWAY': '#d0b080', 'WARDEN-1': '#b0bcc8', HALCYON: '#40f0e0',
+  BLADE: '#c090f0', SCRAPPER: '#80d070', HOLT: '#d8d8ec', COG: '#6ad8f0', ROSE: '#ff7ab8', 'EZRA VANCE': '#7a9af0', 'OLD CALLOWAY': '#d0b080', 'WARDEN-1': '#b0bcc8', HALCYON: '#40f0e0',
   DESSA: '#5ac8a8', 'MA DALTON': '#f0a050', CORVA: '#b890f0', BROKER: '#d8a830', 'JUDGE VERITY': '#e8e4f0', JONAH: '#80d8e8', SENTINEL: '#a0b0e0',
   BAILIFF: '#6a8ae0', VILLAGER: '#c8b898', MOTHER: '#c8b898', FATHER: '#c8b898', CHILD: '#e0b090', 'BLUE COAT': '#6a8ae0', GUARD: '#6a8ae0'
 };
@@ -80,13 +80,13 @@ const STAGES = [
     brief: 'Judge Verity of the Tribunal has come to read a verdict at the Dynamo gate. Break the court.' },
   { id: 's5', ch: 2, name: 'Sable Market', arena: 'market', waves: [[['raider', 5], ['gunner', 2]], [['brute', 1], ['raider', 3]], [['brute', 1, 'mark'], ['gunner', 3, 'shield'], ['drone', 2]]], gold: 150, onyx: 6, unlock: 'blade', goal: { t: 'mark', name: 'WARLORD BREAKER' }, bonus: { t: 'combos', n: 2 },
     brief: 'Rust Rider warlords trade here under the Sable Crows\' flag. Their muscle is big.' },
-  { id: 's18', ch: 2, name: 'Courier Road', arena: 'dust', waves: [[['raider', 4], ['brute', 1]], [['raider', 4], ['gunner', 2]], [['brute', 2], ['raider', 3]]], gold: 160, onyx: 6, goal: { t: 'guard', hp: 190, name: 'CROW WAGON' }, bonus: { t: 'combos', n: 2 },
+  { id: 's18', ch: 2, name: 'Courier Road', arena: 'dust', waves: [[['raider', 4], ['brute', 1]], [['raider', 4], ['gunner', 2]], [['brute', 2], ['raider', 3]]], gold: 160, onyx: 6, unlock: 'rose', goal: { t: 'guard', hp: 190, name: 'CROW WAGON' }, bonus: { t: 'combos', n: 2 },
     brief: 'Rust Riders are raiding a Crow mail wagon. Corva Sable pays well for it to arrive. Keep it alive.' },
   { id: 's19', ch: 2, name: 'Night Auction', arena: 'hall', waves: [[['hound', 4]], [['gunner', 3], ['hound', 2]], [['brute', 1, 'mark'], ['gunner', 2, 'shield'], ['hound', 2]]], gold: 175, onyx: 7, goal: { t: 'mark', name: 'VANCE BAILIFF' }, bonus: { t: 'nodown' },
     brief: 'Vance\'s hounds have followed the Seal into the auction hall. Take down the bailiff who leads them.' },
   { id: 's6', ch: 3, name: 'Wreck Yard', arena: 'yard', waves: [[['gunner', 4], ['drone', 3]], [['brute', 2, 'volatile'], ['raider', 4]], [['brute', 1], ['gunner', 4], ['drone', 3]]], gold: 180, onyx: 7, unlock: 'scrap', goal: { t: 'time', sec: 110 }, bonus: { t: 'combos', n: 3 },
     brief: 'Cargo cranes loom over the Wreck Yard. An engineer bot is pinned under a container.' },
-  { id: 's20', ch: 3, name: 'Scrap Court', arena: 'yard', waves: [[['raider', 3], ['welder', 2]], [['welder', 3], ['raider', 3]], [['brute', 1], ['welder', 3], ['raider', 2]]], gold: 195, onyx: 8, goal: { t: 'time', sec: 100 }, bonus: { t: 'ults', n: 2 },
+  { id: 's20', ch: 3, name: 'Scrap Court', arena: 'yard', waves: [[['raider', 3], ['welder', 2]], [['welder', 3], ['raider', 3]], [['brute', 1], ['welder', 3], ['raider', 2]]], gold: 195, onyx: 8, unlock: 'cog', goal: { t: 'time', sec: 100 }, bonus: { t: 'ults', n: 2 },
     brief: 'Ma Dalton settles disputes in a ring of crushed cars. Pay the toll, or win the bout before time runs out.' },
   { id: 's21', ch: 3, name: 'The Foundry', arena: 'foundry', waves: [[['welder', 3], ['raider', 3]], [['welder', 2], ['brute', 1], ['raider', 2]], [['brute', 2, 'volatile'], ['welder', 3]]], gold: 215, onyx: 8, goal: { t: 'hold', sec: 60 }, bonus: { t: 'nodown' },
     echo: { after: 's20', charge: 30, line: `INTEL: Ma Dalton lends the squad a charged battery from the yard. All robots start this fight with 30% ultimate charge.` },
@@ -95,7 +95,7 @@ const STAGES = [
     brief: 'A rogue loading crane controls the old launch rail. Break it to reach the signal.' },
   { id: 's8', ch: 4, name: 'Dune Edge', arena: 'dust', waves: [[['raider', 4], ['worm', 2]], [['gunner', 3], ['worm', 2]]], gold: 220, onyx: 8, goal: { t: 'hold', sec: 60 }, bonus: { t: 'nodown' },
     brief: 'Dust worms burrow under the dunes. Dodge their bursts.' },
-  { id: 's22', ch: 4, name: 'Salt Flats', arena: 'salt', waves: [[['hound', 3], ['worm', 2]], [['raider', 4], ['worm', 2]], [['hound', 3], ['gunner', 3], ['worm', 1]]], gold: 240, onyx: 9, goal: { t: 'time', sec: 105 }, bonus: { t: 'combos', n: 3 },
+  { id: 's22', ch: 4, name: 'Salt Flats', arena: 'salt', waves: [[['hound', 3], ['worm', 2]], [['raider', 4], ['worm', 2]], [['hound', 3], ['gunner', 3], ['worm', 1]]], gold: 240, onyx: 9, unlock: 'holt', goal: { t: 'time', sec: 105 }, bonus: { t: 'combos', n: 3 },
     brief: 'A white plain with no shade. Hounds are on the trail, and the crust breaks under worms.' },
   { id: 's9', ch: 4, name: 'Dust Caravan', arena: 'dust', waves: [[['raider', 5], ['drone', 3], ['worm', 1]], [['brute', 1, 'mark'], ['brute', 1, 'regen'], ['gunner', 3]], [['worm', 3], ['drone', 3]]], gold: 260, onyx: 9, bonus: { t: 'combos', n: 3 },
     echo: { after: 's7', goal: { t: 'mark', name: 'CARAVAN MASTER' }, line: `INTEL: the Halcyon log said the water was transferred. MENDER: "Those wagons carry it. Take down the caravan master and the rest will scatter."` },
@@ -158,7 +158,10 @@ const STORY_BITS = {
   frost: '"The seed keeper wakes. FROST joins the squad."',
   arc: '"The grid answers to ARC. Now so does the squad."',
   blade: '"BLADE owes nobody. He joins anyway."',
-  scrap: '"SCRAPPER offers to repair everything. Mostly with duct tape."'
+  scrap: '"SCRAPPER offers to repair everything. Mostly with duct tape."',
+  rose: '"Two revolvers, one rule: the mail gets through. ROSE rides with the squad."',
+  cog: '"COG wants to see what wrecked his crane bots. From the inside."',
+  holt: '"HOLT cranks the gatling once, for luck. The old sergeant is in."'
 };
 const CHOICE = {
   head: [`[ HALCYON: TARGET WORLD NOT VIABLE. WATER RESERVE 61%. ]`, `One last decision, and nobody can take it back.`],

@@ -17,6 +17,7 @@
     say('MENDER', 'I worked in a clinic here, before. Third street. It was a good clinic.'),
     say('SIGHT', 'The valley I swore to protect. I cannot make myself look at the walls.'),
     say('BULWARK', 'The people at my gate that night came from down here. I have not said so aloud until now.'),
+    { k: 'say', who: 'HOLT', text: ['Fifth house on the left. Blue door. It had a porch swing. I am not going in. You go ahead, I will keep the street.'], own: 'holt' },
     emo('r1', '!', 1), shake(2),
     say('SCRAPPER', 'Riders. Digging through the rooms for scrap. They sell what they find.'),
     say('EMBER', 'Then let me introduce them to the one thing in this valley that is still dry.')
@@ -29,6 +30,7 @@
     say('SIGHT', 'Ezra\'s brother lived here. Ezra has been hunting us for three years for something that happened on this street.'),
     { k: 'say', who: '@hero', text: ['He let me live. I could do no less for him.'], fl: 'ezra=mercy' },
     { k: 'say', who: '@hero', text: ['I left him in the dust. I did not know about the basin.'], fl: 'ezra=cold' },
+    { k: 'say', who: 'ROSE', text: ['I delivered a letter to this street once. A man in his shirtsleeves signed for it, laughing. He was holding a basin.'], own: 'rose' },
     say('BULWARK', 'A basin, a rim, two names. Everything is smaller than I imagined, and heavier.')
   ];
 

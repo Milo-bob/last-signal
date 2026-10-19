@@ -133,6 +133,7 @@ const Art = (function () {
   const icoCache = {};
   function sprite(name, f) { const l = S[name]; return l[(f || 0) % l.length]; }
   Robots16.names.forEach(n => { S[n] = [0, 1].map(fr => Robots16.get(n, fr)); });
+  Humans.names.forEach(n => { S[n] = [0, 1].map(fr => Humans.get(n, fr)); });   // the human squad members (Holt, Cog, Rose)
   Cast.names.forEach(n => { S[n] = [0, 1].map(fr => Cast.get(n, fr)); });   // the story cast (cutscene people) draw like the robots
   function icon(name, f) { const l = S[name]; return l[(f || 0) % l.length]; }
   return { mk, tint, outline, sprite, icon, arena, hub, drawEarth, hero: (o, f) => Hero16.get(o, f), sideView: true, S };

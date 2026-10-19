@@ -45,6 +45,16 @@ function cratesReady() { return SAVE.crates.filter(c => crateState(c) === 2).len
 // ---------- generic header ----------
 let hubLine = null;
 let selStage = 0, selCh = 1, selHunter = 0, selBagI = -1, selSlot = 2, detailH = 'bulwark';
+const HUB_GROUPS = [   // the hub shows four doors; inside, tabs switch between the parts of a door
+  [['SQUAD', 'squad'], ['PREP ROOM', 'prep'], ['HERO', 'hero']],
+  [['SUPPLY', 'supply'], ['MISSIONS', 'missions']],
+  [['CODEX', 'codex'], ['THE DUST', 'world'], ['MEMORIES', 'memories']]
+];
+function goScene(id) { scene = id; Snd.play('ui'); if (id === 'prep') selBagI = -1; if (id === 'codex') { SAVE.cxSeen = codexCount(); saveGame(); } if (id === 'hero') heroTyping = false; }
+function hubTabs(cur) {
+  const g = HUB_GROUPS.find(q => q.some(t => t[1] === cur)); if (!g) return;
+  g.forEach((t, i) => { const on = t[1] === cur; button(290 + i * 150, 14, 140, 44, t[0], on ? () => {} : () => goScene(t[1]), false, 18, on ? '#ffd040' : null, on ? '#ffd040' : null); });
+}
 function hubBg() { lx.drawImage(Art.hub(), 0, 0); }
 function topBar(title, backFn) {   // backFn: show BACK (calls it) instead of HOME
   ctx.fillStyle = 'rgba(8,10,24,0.85)'; ctx.fillRect(0, 0, W, 70);
@@ -83,7 +93,8 @@ function drawTitle() {
   if (hasSave()) button(W / 2 - 170, 424, 340, 68, 'CONTINUE', () => { Snd.init(); if (loadGame()) { if (!SAVE.heroDone) scene = 'hero'; else if (needsPrologue()) startPrologue(); else scene = 'hub'; Snd.play('ui'); } }, false, 34);
   button(W / 2 - 170, 512, 340, 50, 'SAVE DATA', () => { Snd.init(); openData(); }, false, 24);
   const names = HUNTERS.map(h => h.spr);
-  names.forEach((n, i) => smallSprite(n, 150 + i * 140, 705, 3, Math.floor(time * 2 + i) % 2));
+  const sp = Math.min(140, 1180 / names.length);
+  names.forEach((n, i) => smallSprite(n, W / 2 - (names.length - 1) * sp / 2 + i * sp, 705, 3, Math.floor(time * 2 + i) % 2));
   text('Tap robots to move them, tap enemies to focus, tap ULT when full', W / 2, 604, 20, '#c8d8f8', 'center');
 }
 
@@ -94,18 +105,19 @@ function drawHub() {
   const hs = Art.hero(SAVE.hero, Math.floor(time * 1.5) % 2); lx.imageSmoothingEnabled = false; lx.drawImage(hs, 150 - (hs.lw >> 1), 136 - hs.lh + 6, hs.lw, hs.lh);
   SAVE.squad.forEach((id, i) => { const h = HUNTER_BY[id]; const s = Art.sprite(h.spr, Math.floor(time * 1.5 + i) % 2); lx.drawImage(s, 190 + i * 40 - (s.lw >> 1), 136 - s.lh + 6, s.lw, s.lh); }); lx.imageSmoothingEnabled = false;
   blit(); topBar('HOLLOW CREEK');
-  const items = [['STORY', 'story', 0], ['HERO', 'hero', 0], ['SQUAD', 'squad', 0], ['PREP ROOM', 'prep', 0], ['SUPPLY', 'supply', cratesReady()], ['MISSIONS', 'missions', claimable()], ['CODEX', 'codex', Math.max(0, codexCount() - (SAVE.cxSeen || 0))]];
-  if (SAVE.stages[FINAL_STAGE] && !SAVE.ending) items.push(['RETURN CONSOLE', 'choice', 0]);
-  items.forEach((it, i) => {
-    button(50, 100 + i * 72, 360, 60, it[0], () => { scene = it[1]; Snd.play('ui'); if (it[1] === 'prep') { selBagI = -1; } if (it[1] === 'codex') { SAVE.cxSeen = codexCount(); saveGame(); }
-      if (it[1] === 'story') { const n = STAGES.findIndex(s => !SAVE.stages[s.id]); selStage = n < 0 ? STAGES.length - 1 : n; selCh = STAGES[selStage].ch; } }, false, 30);
-    if (it[2]) { disc(ctx, 410, 104 + i * 72, 16, '#e03030'); text(String(it[2]), 410, 112 + i * 72, 22, '#fff', 'center', 'rgba(0,0,0,0)'); }
+  // four doors instead of a wall of buttons: the story, then the robots, supplies and archive once the first fight is won (each opens a screen with tabs for its parts)
+  const won = progressIdx() >= 1, nxt = STAGES.find(s => !SAVE.stages[s.id]);
+  const doors = [['STORY', 'story', 0, nxt ? 'NEXT: ' + nxt.name : 'ALL STAGES CLEARED', 104, true], ['ROBOTS', 'squad', 0, 'SQUAD  /  PREP ROOM  /  HERO', 224, false]];
+  if (won) doors.push(['SUPPLY', 'supply', cratesReady() + claimable(), 'CRATES  /  MISSIONS', 308, false], ['ARCHIVE', 'codex', Math.max(0, codexCount() - (SAVE.cxSeen || 0)), 'CODEX  /  THE DUST  /  MEMORIES', 392, false]);
+  if (SAVE.stages[FINAL_STAGE] && !SAVE.ending) doors.push(['RETURN CONSOLE', 'choice', 0, 'THE LAST CHOICE', 476, false]);
+  doors.forEach(d => {
+    const big = d[5], h = big ? 104 : 68;
+    button(50, d[4], 420, h, d[0], () => { goScene(d[1]); if (d[1] === 'story') { const n = STAGES.findIndex(s => !SAVE.stages[s.id]); if (!SAVE.seen.prologue && n === 0) { selStage = -1; selCh = 1; return; } selStage = n < 0 ? STAGES.length - 1 : n; selCh = STAGES[selStage].ch; } }, false, big ? 44 : 30, big ? '#ffd040' : null, big ? '#fff0a0' : null);
+    ctx.font = (big ? 18 : 14) + 'px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#10243a'; ctx.fillText(d[3], 260, d[4] + h - (big ? 20 : 14));
+    if (d[2]) { disc(ctx, 470, d[4] + 4, 16, '#e03030'); text(String(d[2]), 470, d[4] + 12, 22, '#fff', 'center', 'rgba(0,0,0,0)'); }
   });
   button(1050, 100, 190, 52, 'HOW TO PLAY', () => openHelp(), false, 20);
   button(1050, 168, 190, 52, 'SAVE DATA', () => openData(), false, 22);
-  button(1050, 236, 190, 52, 'PROLOGUE', () => { Snd.play('ui'); startPrologue(true); }, false, 22);
-  button(1050, 304, 190, 52, 'THE DUST', () => { worldSel = Math.max(0, STAGES.findIndex(q => !SAVE.stages[q.id])); scene = 'world'; Snd.play('ui'); }, false, 22);
-  button(1050, 372, 190, 52, 'MEMORIES', () => { scene = 'memories'; Snd.play('ui'); }, false, 22);
   if (hubLine === null) hubLine = pickHubLine();
   if (hubLine) {   // the squad comments on what has happened so far
     const m = /^([A-Z][A-Z0-9\- ]*[A-Z0-9]):/.exec(hubLine), ls = wrap(hubLine, 560, 20).slice(0, 2);
@@ -122,18 +134,32 @@ function drawStory() {
   text('CHAPTER ' + selCh + ': ' + CHAPTERS[selCh], 40, 112, 28, '#80f0ff');
   text(CHAPTER_INFO[selCh].fam + ': ' + CHAPTER_INFO[selCh].t, 40, 138, 15, CHAPTER_INFO[selCh].col);
   const chFirst = c => STAGES.findIndex(s => s.ch === c), chMax = Math.max.apply(null, STAGES.map(s => s.ch));
-  button(760, 84, 54, 40, '<', () => { selCh--; selStage = chFirst(selCh); Snd.play('ui'); }, selCh <= 1, 26);
+  button(760, 84, 54, 40, '<', () => { selCh--; selStage = selCh === 1 ? -1 : chFirst(selCh); Snd.play('ui'); }, selCh <= 1, 26);
   button(826, 84, 54, 40, '>', () => { selCh++; selStage = chFirst(selCh); Snd.play('ui'); }, selCh >= chMax || !stageUnlocked(chFirst(selCh + 1)), 26);
   const list = STAGES.map((s, i) => [s, i]).filter(p => p[0].ch === selCh);
+  if (selCh === 1) list.unshift([PRO_ENTRY, -1]);   // level 0: the prologue, the first node of chapter 1
   list.forEach((p, k) => {
-    const s = p[0], i = p[1], x = 90 + k * 118, y = 150 + (k % 2) * 100, ok = stageUnlocked(i), st = SAVE.stages[s.id] || 0;
+    const s = p[0], i = p[1], x = 90 + k * 118, y = 150 + (k % 2) * 100, ok = i < 0 || stageUnlocked(i), st = i < 0 ? 0 : SAVE.stages[s.id] || 0;
     if (k < list.length - 1) { ctx.fillStyle = '#3a4060'; ctx.fillRect(x + 28, y + 24 + (k % 2 ? -1 : 0), 90, 4); }
     ctx.fillStyle = i === selStage ? '#ffd040' : ok ? '#80f0ff' : '#3a3a4a'; ctx.fillRect(x - 4, y - 4, 64, 64);
     ctx.fillStyle = s.boss ? '#5a1a1a' : '#12141f'; ctx.fillRect(x, y, 56, 56);
-    text(s.boss ? '!' : String(i + 1 - chFirst(selCh)), x + 28, y + 40, 32, ok ? '#fff' : '#555', 'center');
-    if (ok) stars(x + 2, y + 62, st, 16);
+    text(i < 0 ? '0' : s.boss ? '!' : String(i + 1 - chFirst(selCh)), x + 28, y + 40, 32, ok ? '#fff' : '#555', 'center');
+    if (i < 0) { if (SAVE.seen.prologue) text('DONE', x + 28, y + 76, 16, '#8aff9a', 'center'); } else if (ok) stars(x + 2, y + 62, st, 16);
     if (ok) uiB.push({ x, y, w: 56, h: 56, fn: () => { selStage = i; Snd.play('ui'); } });
   });
+  if (selStage < 0) {   // level 0
+    panel(40, 330, 760, 380, '#80f0ff');
+    text(PRO_ENTRY.name.toUpperCase(), 66, 374, 34, '#ffd040');
+    wrap(PRO_ENTRY.brief, 700, 20).forEach((l, i) => text(l, 66, 410 + i * 26, 20, '#d8e4ff'));
+    text('LEVEL 0  -  THE FIRST STEPS. NO REWARD, NOBODY CAN FALL.', 66, 500, 18, '#ffb060');
+    text(SAVE.seen.prologue ? 'Played. You can walk it again any time.' : 'Start here if you have not played before.', 66, 528, 17, '#c8d8f8');
+    text('ENEMIES', 66, 614, 16, '#80f0ff');
+    ['raider', 'gunner', 'brute', 'worm'].forEach((t, i) => { const sp = Art.sprite(FOES[t].spr, 0), sc = sp.px ? 2 : 2; ctx.imageSmoothingEnabled = false; ctx.drawImage(sp, 70 + i * 96, 700 - sp.lh * sc, sp.lw * sc, sp.lh * sc); });
+    button(540, 650, 240, 50, SAVE.seen.prologue ? 'REPLAY' : 'START', () => { Snd.play('ui'); startPrologue(!!SAVE.seen.prologue); }, false, 28);
+    panel(830, 330, 410, 380, '#80f0ff'); text('YOUR SQUAD', 856, 366, 22, '#80f0ff');
+    text('You find your robots on the way.', 1035, 480, 18, '#c8d8f8', 'center');
+    return;
+  }
   const s = STAGES[selStage];
   const fx = stageFx(s), trs = stageTraits(s);
   panel(40, 330, 760, 380, '#80f0ff');
@@ -148,7 +174,7 @@ function drawStory() {
   text('ENEMIES', 66, 614, 16, '#80f0ff');
   const seen = {}; s.waves.forEach(w => w.forEach(e => seen[e[0]] = 1));
   Object.keys(seen).forEach((t, i) => { const sp = Art.sprite(FOES[t].spr, 0), sc = sp.px ? 2 : (FOES[t].boss ? 1 : 2); ctx.imageSmoothingEnabled = false; ctx.drawImage(sp, 70 + i * 96, 700 - sp.lh * sc, sp.lw * sc, sp.lh * sc); });
-  text('REWARD  $' + s.gold + '   ONYX ' + s.onyx + (s.unlock ? '   + NEW ROBOT' : '') + (perkAt(s.id) ? '   + NEW: ' + PERKS[perkAt(s.id)].name : ''), 420, 614, 18, '#ffd040');
+  text('REWARD  $' + s.gold + '   ONYX ' + s.onyx + (s.unlock ? (HUNTER_BY[s.unlock].human ? '   + NEW ALLY' : '   + NEW ROBOT') : '') + (perkAt(s.id) ? '   + NEW: ' + PERKS[perkAt(s.id)].name : ''), 420, 614, 18, '#ffd040');
   text('WAVES: ' + s.waves.length, 420, 640, 18, '#c8d8f8');
   button(540, 650, 240, 50, 'START', () => {
     if (SAVE.squad.length !== 3) return; Snd.play('ui'); const st = STAGES[selStage], idx = selStage;
@@ -163,22 +189,21 @@ function drawStory() {
 // ---------- squad ----------
 let coachStep = 0;   // first visit after the prologue: 1 = take a robot out, 2 = put it back
 function drawSquad() {
-  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.7)'; ctx.fillRect(0, 70, W, H - 70); topBar('SQUAD');
+  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.7)'; ctx.fillRect(0, 70, W, H - 70); topBar('SQUAD'); hubTabs('squad');
   if (coachStep === 1 && SAVE.squad.length < 3) coachStep = 2;
   if (coachStep === 2 && SAVE.squad.length === 3) { coachStep = 0; SAVE.seen.coach = 1; saveGame(); toastMsg('Three slots. More robots wake up as you clear stages.'); }
-  text(coachStep === 1 ? 'THIS IS YOUR SQUAD: THREE SLOTS. TAP A ROBOT IN A GOLD FRAME TO TAKE IT OUT.' : coachStep === 2 ? 'NOW TAP IT AGAIN TO PUT IT BACK. A SQUAD NEEDS THREE.' : 'TAP A ROBOT TO ADD OR REMOVE IT. YOU NEED 3.', 40, 112, 22, coachStep ? '#ffd040' : '#80f0ff');
-  HUNTERS.forEach((h, i) => {
-    const x = 40 + (i % 4) * 190, y = 140 + Math.floor(i / 4) * 250, own = SAVE.owned.indexOf(h.id) >= 0, inSq = SAVE.squad.indexOf(h.id) >= 0;
+  text(coachStep === 1 ? 'THIS IS YOUR SQUAD: THREE SLOTS. TAP A ROBOT IN A GOLD FRAME TO TAKE IT OUT.' : coachStep === 2 ? 'NOW TAP IT AGAIN TO PUT IT BACK. A SQUAD NEEDS THREE.' : 'TAP A MEMBER TO ADD OR REMOVE IT. YOU NEED 3.', 40, 112, 22, coachStep ? '#ffd040' : '#80f0ff');
+  scrollArea('squad', 30, 122, 764, 546, 8 + Math.ceil(HUNTERS.length / 4) * 172, 800, () => HUNTERS.forEach((h, i) => {
+    const x = 40 + (i % 4) * 190, y = 130 + Math.floor(i / 4) * 172, own = SAVE.owned.indexOf(h.id) >= 0, inSq = SAVE.squad.indexOf(h.id) >= 0;
     const pul = coachStep && own && (coachStep === 1 ? inSq : !inSq) && Math.floor(time * 3) % 2;
-    ctx.fillStyle = pul ? '#ffffff' : inSq ? '#ffd040' : own ? h.col : '#333'; ctx.fillRect(x - 4, y - 4, 178, 238);
-    ctx.fillStyle = '#12141f'; ctx.fillRect(x, y, 170, 230);
+    ctx.fillStyle = pul ? '#ffffff' : inSq ? '#ffd040' : own ? h.col : '#333'; ctx.fillRect(x - 4, y - 4, 178, 168);
+    ctx.fillStyle = '#12141f'; ctx.fillRect(x, y, 170, 160);
     if (own) {
-      smallSprite(h.spr, x + 85, y + 134, 3, Math.floor(time * 1.5 + i) % 2); text(h.name, x + 85, y + 150, 22, '#fff', 'center'); text(h.role, x + 85, y + 174, 16, h.col, 'center');
-      text('LV ' + SAVE.h[h.id].lvl, x + 85, y + 200, 18, '#ffd040', 'center');
+      smallSprite(h.spr, x + 85, y + 98, 2, Math.floor(time * 1.5 + i) % 2); text(h.name, x + 85, y + 122, 20, '#fff', 'center'); text(h.role + '  LV ' + SAVE.h[h.id].lvl, x + 85, y + 146, 14, h.col, 'center');
       if (inSq) text('IN SQUAD', x + 85, y + 16, 13, '#ffd040', 'center');
-      uiB.push({ x, y, w: 170, h: 230, fn: () => { detailH = h.id; Snd.play('ui'); const k = SAVE.squad.indexOf(h.id); if (k >= 0) { if (SAVE.squad.length > 1) SAVE.squad.splice(k, 1); } else if (SAVE.squad.length < 3) SAVE.squad.push(h.id); else { SAVE.squad[selSlot] = h.id; selSlot = (selSlot + 1) % 3; } saveGame(); } });
-    } else { text('LOCKED', x + 85, y + 120, 24, '#666', 'center'); text(STAGES.find(s => s.unlock === h.id) ? 'Clear ' + STAGES.find(s => s.unlock === h.id).name : '', x + 85, y + 150, 13, '#666', 'center'); }
-  });
+      uiB.push({ x, y, w: 170, h: 160, fn: () => { detailH = h.id; Snd.play('ui'); const k = SAVE.squad.indexOf(h.id); if (k >= 0) { if (SAVE.squad.length > 1) SAVE.squad.splice(k, 1); } else if (SAVE.squad.length < 3) SAVE.squad.push(h.id); else { SAVE.squad[selSlot] = h.id; selSlot = (selSlot + 1) % 3; } saveGame(); } });
+    } else { text('LOCKED', x + 85, y + 80, 24, '#666', 'center'); text(STAGES.find(s => s.unlock === h.id) ? 'Clear ' + STAGES.find(s => s.unlock === h.id).name : '', x + 85, y + 110, 13, '#666', 'center'); }
+  }));
   const d = HUNTER_BY[detailH], st = hunterStats(detailH);
   panel(830, 140, 410, 488, d.col);
   smallSprite(d.spr, 1035, 298, 4, Math.floor(time * 2) % 2);
@@ -193,11 +218,13 @@ function drawSquad() {
 
 // ---------- prep room (levels, skills, gear) ----------
 function drawPrep() {
-  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.78)'; ctx.fillRect(0, 70, W, H - 70); topBar('PREP ROOM');
+  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.78)'; ctx.fillRect(0, 70, W, H - 70); topBar('PREP ROOM'); hubTabs('prep');
+  const two = SAVE.owned.length > 8;
   SAVE.owned.forEach((id, i) => {
-    const x = 20, y = 84 + i * 76, h = HUNTER_BY[id];
-    ctx.fillStyle = detailH === id ? '#ffd040' : h.col; ctx.fillRect(x - 3, y - 3, 76, 70); ctx.fillStyle = '#12141f'; ctx.fillRect(x, y, 70, 64);
-    faceSprite(h.spr, x + 35, y + 6, 2, 0); uiB.push({ x, y, w: 70, h: 64, fn: () => { detailH = id; Snd.play('ui'); } });
+    const x = two ? 8 + (i % 2) * 56 : 20, y = 84 + (two ? Math.floor(i / 2) : i) * 76, w = two ? 48 : 70, h = HUNTER_BY[id];
+    ctx.fillStyle = detailH === id ? '#ffd040' : h.col; ctx.fillRect(x - 3, y - 3, w + 6, 70); ctx.fillStyle = '#12141f'; ctx.fillRect(x, y, w, 64);
+    if (two) { ctx.imageSmoothingEnabled = false; ctx.drawImage(Art.icon(h.spr, 0), 0, 1, 24, 16, x + 1, y + 12, 46, 31); } else faceSprite(h.spr, x + 35, y + 6, 2, 0);
+    uiB.push({ x, y, w, h: 64, fn: () => { detailH = id; Snd.play('ui'); } });
   });
   const id = detailH, h = HUNTER_BY[id], sv = SAVE.h[id], st = hunterStats(id);
   panel(120, 84, 400, 600, h.col);
@@ -269,7 +296,7 @@ function drawCrateChoice() {
 function drawSupply() {
   hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.78)'; ctx.fillRect(0, 70, W, H - 70);
   if (crateChoice) { drawCrateChoice(); return; }
-  topBar('SUPPLY');
+  topBar('SUPPLY'); hubTabs('supply');
   text('Call supply crates from the Sable Crows. Their caravans take time to arrive.', 40, 120, 22, '#80f0ff');
   SAVE.crates.forEach((c, i) => {
     const x = 60 + i * 400, y = 170, s = crateState(c), left = Math.max(0, Math.ceil((c.t - Date.now()) / 1000));
@@ -289,7 +316,7 @@ function drawSupply() {
 
 // ---------- missions ----------
 function drawMissions() {
-  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.78)'; ctx.fillRect(0, 70, W, H - 70); topBar('MISSIONS');
+  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.78)'; ctx.fillRect(0, 70, W, H - 70); topBar('MISSIONS'); hubTabs('missions');
   text('DAILY MISSIONS (reset each day)', 40, 120, 22, '#80f0ff');
   MISSIONS.forEach((m, i) => {
     const y = 150 + i * 100, p = SAVE.missions[m.id];
@@ -329,7 +356,7 @@ function drawResult() {
     }
     if (r.bonus) text('BONUS: ' + r.bonus.text + (r.bonus.met ? (r.bonus.onyx ? '  DONE  +' + r.bonus.onyx + ' ONYX' : '  DONE') : '  MISSED'), 640, 482, 18, r.bonus.met ? '#8aff9a' : '#a0a8c0', 'center');
     if (r.found) text('FOUND: ' + FINDS[r.found].title + ' (added to the codex)', 640, 506, 18, '#ffd040', 'center');
-    if (r.unlock) { const h = HUNTER_BY[r.unlock]; smallSprite(h.spr, 400, 600, 2, 0); text('NEW ROBOT: ' + h.name, 640, 536, 26, h.col, 'center'); wrap(STORY_BITS[r.unlock], 480, 16).forEach((l, i) => text(l, 640, 562 + i * 20, 16, '#c8d8f8', 'center')); }
+    if (r.unlock) { const h = HUNTER_BY[r.unlock]; smallSprite(h.spr, 400, 600, 2, 0); text((h.human ? 'NEW ALLY: ' : 'NEW ROBOT: ') + h.name, 640, 536, 26, h.col, 'center'); wrap(STORY_BITS[r.unlock], 480, 16).forEach((l, i) => text(l, 640, 562 + i * 20, 16, '#c8d8f8', 'center')); }
     else if (r.perk) { const pk = PERKS[r.perk]; text('NEW: ' + pk.name, 640, 540, 28, '#ffd040', 'center'); wrap(pk.text, 560, 17).forEach((l, i) => text(l, 640, 568 + i * 22, 17, '#c8d8f8', 'center')); }
     nextHints().forEach((l, i) => text(l, 640, 616 + i * 20, 15, '#80f0ff', 'center'));
   } else {

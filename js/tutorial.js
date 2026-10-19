@@ -99,11 +99,18 @@ const HELP = [
 ];
 function drawHelp() {
   hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.86)'; ctx.fillRect(0, 0, W, H); topBar('HOW TO PLAY', () => { scene = helpReturn; Snd.play('ui'); });
-  HELP.forEach((t, i) => opt(40, 92 + i * 50, 250, 42, t.title, helpTopic === i, () => { helpTopic = i; Snd.play('ui'); }, false, 20));
+  scrollArea('helpList', 36, 84, 262, 624, 8 + HELP.length * 50 + 8, 304, () => {
+    HELP.forEach((t, i) => opt(40, 92 + i * 50, 250, 42, t.title, helpTopic === i, () => { helpTopic = i; scrollOff.helpText = 0; Snd.play('ui'); }, false, 20));
+  });
   panel(330, 92, 910, 500, '#80f0ff');
   const t = HELP[helpTopic]; text(t.title, 360, 144, 36, '#ffd040');
-  let y = 190; const fs = t.size || 21;
-  t.lines.forEach(l => { wrap(l, 840, fs).forEach((s, k) => { text(s, k ? 384 : 360, y, fs, '#d8e4ff'); y += fs + 7; }); y += 10; });
+  const fs = t.size || 21; let y = 190;
+  t.lines.forEach(l => { y += wrap(l, 820, fs).length * (fs + 7) + 10; });
+  const endY = y;
+  scrollArea('helpText', 340, 160, 880, 428, endY - 160, 1222, () => {
+    y = 190;
+    t.lines.forEach(l => { wrap(l, 820, fs).forEach((s, k) => { text(s, k ? 384 : 360, y, fs, '#d8e4ff'); y += fs + 7; }); y += 10; });
+  });
   button(330, 616, 250, 52, 'REPLAY TIPS', () => { SAVE.tut = {}; SAVE.tipsOff = false; saveGame(); Snd.play('level'); toastMsg('Combat tips will show again in your next battle.'); }, false, 22);
   button(600, 616, 250, 52, 'TIPS: ' + (SAVE.tipsOff ? 'OFF' : 'ON'), () => { SAVE.tipsOff = !SAVE.tipsOff; saveGame(); Snd.play('ui'); }, false, 22);
   text('Combat tips show up once, next to the action, and never cover the controls.', 330, 696, 16, '#8890b0');

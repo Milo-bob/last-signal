@@ -6,7 +6,7 @@
 //   steps ({k: ...}):  bg id t | fade to t | bars on | tint c a | cam at:[x,y] z t | actor id who at face | move id to t | face id dir | emote id e t | hide id | show id | alpha id to t |
 //                      prop id kind at | say who text[] | choice q opts:[{t, fl, steps}] | menu q opts exit | wait t | shake n | flash | sfx n | cap text t | title text sub t |
 //                      fx kind on | set {flag: value} | give gold onyx | toast s | run fn | end
-//   Any step (and any choice option) can carry a condition: o:'guard' (hero past), at:'s7' (see cleared() in story.js), fl:'ezra=mercy' or fl:'!ezra=mercy'.
+//   Any step (and any choice option) can carry a condition: o:'guard' (hero past), own:'rose' (that squad member has joined), at:'s7' (see cleared() in story.js), fl:'ezra=mercy' or fl:'!ezra=mercy'.
 //   (A choice option's own `fl` is an object, the flags it sets: { ezra: 'mercy' }.)
 //   The scene space is the 320x180 pixel layer; characters stand on y 105..132 (the dialogue box covers the bottom of the picture).
 //
@@ -18,11 +18,11 @@ let SC = null;
 
 // who speaks -> which actor/sprite shows as the portrait (and moves its mouth if it stands in the scene)
 const VOICE = {
-  SIGHT: 'sight', BULWARK: 'bulwark', MENDER: 'mender', EMBER: 'ember', FROST: 'frost', ARC: 'arc', BLADE: 'blade', SCRAPPER: 'scrap',
+  SIGHT: 'sight', BULWARK: 'bulwark', MENDER: 'mender', EMBER: 'ember', FROST: 'frost', ARC: 'arc', BLADE: 'blade', SCRAPPER: 'scrap', HOLT: 'holt', COG: 'cog', ROSE: 'rose',
   'EZRA VANCE': 'ezra', 'OLD CALLOWAY': 'calloway', DESSA: 'dessa', 'MA DALTON': 'ma', CORVA: 'corva', BROKER: 'broker', 'JUDGE VERITY': 'judge',
   'WARDEN-1': 'warden', SENTINEL: 'sentinel', JONAH: 'jonah', VILLAGER: 'villager', MOTHER: 'villager', FATHER: 'villager', CHILD: 'kid', 'BLUE COAT': 'gunner', GUARD: 'gunner', BAILIFF: 'gunner', HALCYON: 'halcyon'
 };
-const RECRUIT_ORDER = ['ember', 'frost', 'arc', 'blade', 'scrap'];
+const RECRUIT_ORDER = ['ember', 'frost', 'arc', 'blade', 'scrap', 'rose', 'cog', 'holt'];
 
 function sceneKey(id) { const m = /^(pre|post)_(s\d+)$/.exec(id); return m ? m[1] + m[2] : id; }   // the save keeps these keys since the story cards: 'pres1', 'posts7'
 function stageSceneId(kind, st) { return kind + '_' + st.id; }
@@ -39,6 +39,7 @@ function setFlag(k, v) {
 }
 function condOk(st) {
   if (st.o && !(typeof SAVE !== 'undefined' && SAVE && SAVE.hero && SAVE.hero.origin === st.o)) return false;
+  if (st.own && !(typeof SAVE !== 'undefined' && SAVE && SAVE.owned && SAVE.owned.indexOf(st.own) >= 0)) return false;   // own: only if that squad member has joined
   if (typeof st.at === 'string' && !cleared(st.at)) return false;   // on actor, prop and cam steps `at` is a position (an array), not a condition
   if (typeof st.fl === 'string' || Array.isArray(st.fl)) { const list = [].concat(st.fl); for (const c of list) { const neg = c[0] === '!', p = (neg ? c.slice(1) : c).split('='); if (flagIs(p[0], p[1]) === neg) return false; } }
   return true;

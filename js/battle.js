@@ -179,7 +179,7 @@ function heroSlam() {   // SLAM: shockwave around the hero. Damage, knockback, a
   B.proj = B.proj.filter(p => { if (p.own === 'e' && Math.hypot(p.x - h.x, p.y - h.y) < R + 10) { bfx('spark', p.x, p.y, { vx: rnd(-40, 40), vy: rnd(-40, 40), col: '#ffffff', life: 0.25 }); return false; } return true; });
 }
 function bolt(h, e, o) {
-  const a = Math.atan2(e.y - h.y, e.x - h.x);
+  const a = Math.atan2(e.y - h.y, e.x - h.x) + (o.jit ? rnd(-o.jit, o.jit) : 0);   // jit: spread in radians (the gatling)
   B.proj.push(Object.assign({ x: h.x, y: h.y - 4, vx: Math.cos(a) * (o.speed || 200), vy: Math.sin(a) * (o.speed || 200), own: 'h', src: h, dmg: h.atk, life: 1.5, r: 3, col: '#fff2a0' }, o));
 }
 function attack(h, e) {
@@ -201,6 +201,15 @@ function attack(h, e) {
     Snd.play('zap');
   } else if (id === 'scrap') { bolt(h, e, { speed: 210, col: '#ffb040' }); Snd.play('laser'); }
   else if (id === 'mender') { dmgEnemy(e, h.atk * 0.8, h); bfx('beam', h.x, h.y - 4, { x2: e.x, y2: e.y, col: '#80ff90', life: 0.15 }); }
+  else if (id === 'holt') { bolt(h, e, { speed: 260, col: '#ffd870', r: 2, jit: 0.07 }); bfx('flash', h.x + h.face * 12, h.y - 3, { life: 0.04 }); if ((h.n = (h.n | 0) + 1) % 2) Snd.play('derringer'); }   // the gatling only clicks on every second shot
+  else if (id === 'cog') {   // clockwork hammer: the target takes the full hit, enemies standing next to it take a smaller one and get shoved
+    dmgEnemy(e, h.atk, h); knock(e, h, 4);
+    B.enemies.slice().forEach(o => { if (o !== e && targetable(o) && Math.hypot(o.x - e.x, o.y - e.y) < 22) { dmgEnemy(o, h.atk * 0.6, h); knock(o, e, 5); } });
+    bfx('ring', e.x, e.y, { col: '#80e8ff', r: 18, life: 0.2 }); bfx('slash', e.x, e.y, { dir: h.face, col: '#ffd070', life: 0.18 }); Snd.play('slam');
+  } else if (id === 'rose') {   // two revolvers: left, then right
+    bolt(h, e, { speed: 300, col: '#ffe0a0', jit: 0.03 }); bfx('flash', h.x + h.face * 12, h.y - 7, { life: 0.05 }); Snd.play('derringer');
+    lat(0.12, () => { if (!h.alive || e.hp <= 0 || !B || B.state !== 'play') return; bolt(h, e, { speed: 300, col: '#ffe0a0', jit: 0.03 }); bfx('flash', h.x + h.face * 12, h.y - 2, { life: 0.05 }); Snd.play('derringer'); });
+  }
 }
 function healAlly(h, a) {
   h.cd = h.rate; const amt = h.atk * 2.2; a.hp = Math.min(a.maxhp, a.hp + amt);
@@ -261,6 +270,15 @@ function castUlt(h) {
     const list = foes.sort((a, b) => dist(h, a) - dist(h, b)).slice(0, 5); h.shield = 0.18 * list.length + 0.5;
     list.forEach((e, i) => lat(i * 0.18, () => { if (!h.alive || e.hp <= 0) return; bfx('beam', h.x, h.y, { x2: e.x, y2: e.y, col: '#e0b0ff', life: 0.2, wide: true }); h.x = clamp(e.x - 8, AX0, AX1); h.y = e.y; dmgEnemy(e, h.atk * 3 * M, h); bfx('slash', e.x, e.y, { dir: 1, col: '#ffffff', life: 0.18 }); Snd.play('hit'); }));
   } else if (h.id === 'scrap') { for (let i = 0; i < 4; i++) B.allies.push({ kind: 'drone', x: h.x, y: h.y, t: 6, cd: i * 0.1, a: i * 1.57, atk: h.atk * 0.9, src: h }); }
+  else if (h.id === 'holt') {   // LEAD STORM: 24 shots over about 3.6 seconds, each at a random enemy
+    for (let i = 0; i < 24; i++) lat(i * 0.15, () => { if (!h.alive) return; const t = foesAlive().filter(targetable); if (!t.length) return; const e = pick(t); h.face = e.x >= h.x ? 1 : -1; bolt(h, e, { speed: 280, col: '#ffe890', dmg: h.atk * 1.5 * M, r: 2, jit: 0.04 }); bfx('flash', h.x + h.face * 12, h.y - 3, { life: 0.04 }); if (i % 2) Snd.play('derringer'); });
+  } else if (h.id === 'cog') {   // OVERCLOCK: the piston comes down
+    bfx('ring', h.x, h.y, { col: '#ff8a30', r: 64, life: 0.5 }); bfx('ring', h.x, h.y, { col: '#80e8ff', r: 38, life: 0.4 }); B.shake = Math.max(B.shake, 7); B.hitstop = 0.06; Snd.play('slam');
+    foes.forEach(e => { if (dist(h, e) < 64 + e.def.r) { dmgEnemy(e, h.atk * 3 * M, h); if (e.hp > 0) { knock(e, h, 10, true); if (!e.def.boss) e.st.stun = Math.max(e.st.stun, 1.5); } } });
+  } else if (h.id === 'rose') {   // FAN THE HAMMER: twelve shots, aimed at the three toughest enemies
+    const top = foes.slice().sort((a, b) => b.hp - a.hp).slice(0, 3);
+    if (top.length) for (let i = 0; i < 12; i++) lat(i * 0.1, () => { if (!h.alive) return; const t = top.filter(e => e.hp > 0); if (!t.length) return; const e = t[i % t.length]; h.face = e.x >= h.x ? 1 : -1; bolt(h, e, { speed: 320, col: '#ff9ad0', dmg: h.atk * 1.7 * M, jit: 0.02 }); bfx('flash', h.x + h.face * 12, h.y - (i % 2 ? 2 : 7), { life: 0.05 }); Snd.play('derringer'); });
+  }
 }
 
 // ---------- enemies ----------

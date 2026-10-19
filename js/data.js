@@ -16,7 +16,14 @@ const HUNTERS = [
   { id: 'blade', name: 'BLADE', role: 'ASSASSIN', el: null, hp: 170, atk: 17, rate: 0.55, range: 15, spd: 44, melee: true, spr: 'blade',
     desc: 'Fast melee ninja. Cuts through the backline.', ult: 'BLADE DANCE', ultDesc: 'Dashes through five enemies in a flurry.', col: '#a070d8' },
   { id: 'scrap', name: 'SCRAPPER', role: 'ENGINEER', el: null, hp: 150, atk: 9, rate: 0.8, range: 72, spd: 28, spr: 'scrap',
-    desc: 'Builds auto-turrets from scrap every few seconds.', ult: 'DRONE SWARM', ultDesc: 'Four combat drones attack for 6s.', col: '#5a9a4a' }
+    desc: 'Builds auto-turrets from scrap every few seconds.', ult: 'DRONE SWARM', ultDesc: 'Four combat drones attack for 6s.', col: '#5a9a4a' },
+  // the three humans who can stand in the squad (human: true, drawn in humans.js). They join like the robots: clear their stage.
+  { id: 'holt', name: 'HOLT', role: 'GUNNER', el: null, hp: 190, atk: 5, rate: 0.2, range: 82, spd: 22, human: true, spr: 'holt',
+    desc: 'Old Calloway gate sergeant with a hand-cranked gatling gun. A wall of lead, but slow on his feet.', ult: 'LEAD STORM', ultDesc: 'Cranks the gatling for a barrage of 24 shots at random enemies.', col: '#d8d8ec' },
+  { id: 'cog', name: 'COG', role: 'INVENTOR', el: null, hp: 200, atk: 16, rate: 1.3, range: 17, spd: 26, melee: true, human: true, spr: 'cog',
+    desc: 'Dalton Combine inventor with a clockwork sledgehammer. Every swing also hits what stands next to the target.', ult: 'OVERCLOCK', ultDesc: 'Slams the piston down: damages and stuns every enemy close by.', col: '#6ad8f0' },
+  { id: 'rose', name: 'ROSE', role: 'GUNSLINGER', el: null, hp: 125, atk: 9, rate: 0.7, range: 100, spd: 34, human: true, spr: 'rose',
+    desc: 'Crow outrider with a revolver in each hand. Fast on her feet, two shots per trigger pull.', ult: 'FAN THE HAMMER', ultDesc: 'Fires twelve quick shots at the toughest enemies.', col: '#ff7ab8' }
 ];
 const HUNTER_BY = {}; HUNTERS.forEach(h => HUNTER_BY[h.id] = h);
 // the player's hero fights next to the squad (stats come from the squad level, see heroUnit in battle.js)

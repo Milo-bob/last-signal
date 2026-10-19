@@ -46,7 +46,15 @@
     say('MA DALTON', 'Jonah. Seventeen. A valve apprentice for the Calloways. Vance\'s dogs found him three winters ago.'),
     say('MA DALTON', 'They took the hand with the mark. It is the only way a Seal comes off.'),
     say('MENDER', 'I am so sorry.'),
-    say('MA DALTON', 'Do not be. Be useful. Come to the Foundry. There is something I should have shown somebody years ago.')
+    say('MA DALTON', 'Do not be. Be useful. Come to the Foundry. There is something I should have shown somebody years ago.'),
+    act('cog', 'cog', 306, 128, -1), go('cog', 222, 128, 1.6), emo('cog', '!', 1),
+    say('COG', 'Ma! Ma, did you see that? Three crane bots in four minutes! I built those to last an hour against a Rust Rider warlord!'),
+    say('MA DALTON', 'Cog. Not now.'),
+    say('COG', 'But the left servo. Whatever you did to it, it is not in my notes. I need to see the thing that did that. Take me with you. I carry my own tools and I only bill by the rivet.'),
+    say('MA DALTON', 'He is the best engineer the Combine ever had, and the youngest. He drew the baffles for most of what is wrong with my accounts. Take him. He will talk the entire way.'),
+    say('COG', 'I am twenty-three. I have been told I talk. I have not been told what I am wrong about, which means I am probably right.'),
+    say('EMBER', 'He is going to be insufferable. I approve.'),
+    sys('[ COG HAS JOINED THE SQUAD ]')
   ];
 
   SCENES.pre_s21 = () => [
@@ -71,6 +79,8 @@
     say('JONAH', 'If I am wrong, I wanted you to know I asked.'),
     { k: 'alpha', id: 'jonah', to: 0, t: 1.4 }, wait(0.4),
     say('MA DALTON', 'He asked twice. I am his mother, and I never asked once.'),
+    { k: 'say', who: 'COG', text: ['Tank thirty-two seventeen. I drew the baffle plates. They were built to hold a reservoir still, not to carry one off. I never asked what they were for.'], own: 'cog' },
+    { k: 'say', who: 'MA DALTON', text: ['Nobody did, Cog. That is the part we have to live with.'], own: 'cog' },
     choice('MA DALTON ONLY LOOKS AT YOUR SEAL', [
       { t: '"I will bring his Seal home to you."', fl: { jonah: 'promise' }, steps: [say('MA DALTON', 'Vance has it in a box somewhere. If you get it back, I would like to hold it. That is all I ask.')] },
       { t: '"I cannot promise that."', fl: { jonah: 'none' }, steps: [say('MA DALTON', 'Honest. I have buried enough promises. Come back when you can.')] }
@@ -85,6 +95,8 @@
     say('SIGHT', 'I know this place. I stood right there. That crane lifted the last tank aboard.'),
     { k: 'say', who: 'ARC', text: ['The grid log from the Dynamo said the same thing. Triple load, all night, and nobody asked why.'], at: 'find:s4' },
     say('MA DALTON', 'Aim for the hip joint under the left plate. Ignore the fingers. They only look dangerous.'),
+    { k: 'say', who: 'COG', text: ['That is my crane. Mine! I wrote its load limits on a napkin. It was supposed to lift tanks, not hold a grudge.'], own: 'cog' },
+    { k: 'say', who: 'COG', text: ['The hip plate takes two solid hits. I bolted it on myself, so be gentle. Not too gentle.'], own: 'cog' },
     shake(5), sfx('roar'), emo('hand', '!', 1.4)
   ];
   SCENES.post_s7 = () => [
@@ -147,12 +159,24 @@
     say('SIGHT', 'That is not the wind. Hounds. Close.')
   ];
   SCENES.post_s22 = () => [
-    bg('salt'), tint('255,150,90', 0.1), prop('fire', 'fire', 150, 126), act('hero', 'hero', 126, 128, 1), act('mender', 'mender', 150, 129, 1), act('bulwark', 'bulwark', 176, 124, -1), frame(null, 0), wait(0.8),
+    bg('salt'), tint('255,150,90', 0.1), prop('fire', 'fire', 150, 126), act('hero', 'hero', 126, 128, 1), act('mender', 'mender', 150, 129, 1), act('bulwark', 'bulwark', 176, 124, -1),     frame(null, 0), wait(0.8),
+    sfx('roar'), act('holt', 'holt', 312, 128, -1), go('holt', 214, 128, 2), emo('holt', '!', 1),
+    say('HOLT', 'Hold your fire. I am on your side. Those hounds were mine. Three years I have walked this salt putting down every one I find. You did in an hour what took me a winter.'),
+    say('BULWARK', 'That voice. Sergeant Holt, Calloway gate guard, retired.'),
+    say('HOLT', 'And you are the big tin that stood on the far side of the north gate. Gate-3. I know that shield. I put forty rounds into it that night, trying to shoot the lock chain off.'),
+    say('BULWARK', 'Forty of the three hundred and eleven. I count them every evening. I know which ones are yours.'),
+    say('HOLT', 'Then we have both stood at that gate every night for twelve years. I only had to walk a little further to get away from it.'),
+    say('HOLT', 'The hounds took a boy off my porch three winters back. Sixteen, hardly shaved. Said his name was Ans, and that he was a valve apprentice. He hummed when he was scared.'),
+    emo('hero', '!', 1.4),
+    say(H, 'I know that boy.'),
+    say('HOLT', 'Then I am coming with you. Somebody ought to hand that gun to the people who built the gate. I would rather it be pointed the right way this time.'),
+    sys('[ HOLT HAS JOINED THE SQUAD ]'),
     say('MENDER', 'I keep a list, {HERO}. Everyone I could not save. The cache ran out years ago, so I carved the rest into my casing.'),
     say('MENDER', 'The first name is a girl called Nell Hartwell. Eight years old. She came to my clinic every winter with a cough.'),
     say('MENDER', 'The last time she came, her mother said they were leaving. They kept touching a piece of paper in a pocket. I thought it was a ticket. I did not ask.'),
     say(H, 'You could not have known what it was.'),
     say('MENDER', 'No. But I could have asked.'),
+    { k: 'say', who: 'HOLT', text: ['A list. I keep one too, Doctor. Mine has only one name on it, and I have never written it down.'], own: 'holt' },
     emo('mender', '...', 1.6)
   ];
 
@@ -187,6 +211,7 @@
     say(H, 'Jonah Dalton. And Ansel.'),
     say('MENDER', 'Ansel Calloway? The old man\'s grandson?'),
     say(H, 'He carried the lamp on the dam stair. He was sixteen. He used to hum when he was nervous.'),
+    { k: 'say', who: 'HOLT', text: ['Ans. A. Calloway. I let a Calloway sleep on my porch for a week and never asked his name. I should have kept the gun by the door.'], own: 'holt' },
     say('BULWARK', 'And Ezra Vance has had their Seals for three years, in a box.'),
     say('SIGHT', 'He is not collecting trophies. He is collecting a quorum.')
   ];
@@ -218,6 +243,9 @@
     say('MENDER', 'Hartwell. Seat one hundred and fourteen. Nell.'),
     sys('[ SEAT 114: HARTWELL, N. (AGE 8). PAID: THREE BARRELS. STATUS: BOARDED. NOTE: SHUTTLE 14 DOES NOT LIFT. ]'),
     emo('mender', '...', 2), wait(1),
+    { k: 'say', who: 'ROSE', text: ['Hartwell. Willow Fork route, a sealed envelope, one winter before the Breach. Three barrels paid, delivery signed by a small hand.'], own: 'rose' },
+    { k: 'say', who: 'ROSE', text: ['I carried that ticket to her door. She said thank you. She was eight. I have wondered every day since what I handed her.'], own: 'rose' },
+    { k: 'say', who: 'MENDER', text: ['Then we both touched the same piece of paper, and neither of us asked.'], own: 'rose' },
     say('MENDER', 'She boarded. She had a cough and a paper in her pocket, and she boarded. The flower on that grave is for her.'),
     say('CORVA', 'Yes. I sold her the seat. I sold a great many. A ticket is a hope, and hope is cheap to print.'),
     say(H, 'You knew the shuttle would never lift.'),

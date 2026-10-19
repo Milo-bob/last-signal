@@ -14,6 +14,7 @@ const PRO_CAMP = [   // dormant robots: where they stand and what they say when 
   { id: 'mender', x: 138, y: 142, say: 'Fresh bolts, a clean signal. Hold still, I will see what is left of you.' }
 ];
 
+const PRO_ENTRY = { name: 'The Road to Hollow Creek', ch: 1, brief: 'Walk to the old camp at Hollow Creek. Something is out on the road. At the camp, someone is still waiting.' };
 function needsPrologue() { return !!SAVE && !SAVE.seen.prologue && progressIdx() === 0; }
 
 function startPrologue(replay) {
@@ -73,11 +74,11 @@ function proFinish() {
 }
 function finishPrologue() {
   const rp = B && B.prol && B.prol.replay; B = null;
-  if (rp) { scene = 'hub'; return; }
+  if (rp) { selStage = -1; selCh = 1; scene = 'story'; return; }
   SAVE.seen.prologue = 1; saveGame();
   coachStep = SAVE.seen.coach ? 0 : 1; scene = coachStep ? 'squad' : 'hub';
 }
-function skipPrologue() { const rp = B && B.prol && B.prol.replay; B = null; if (!rp) { SAVE.seen.prologue = 1; saveGame(); } scene = 'hub'; }
+function skipPrologue() { const rp = B && B.prol && B.prol.replay; B = null; if (!rp) { SAVE.seen.prologue = 1; saveGame(); } if (rp) { selStage = -1; selCh = 1; scene = 'story'; } else scene = 'hub'; }
 
 function prologueUpdate(dt, dt0) {
   const P = B.prol, hero = proHero(), en = B.enemies;

@@ -65,6 +65,21 @@ codexAdd({ cat: 'PEOPLE', title: 'JONAH DALTON', spr: 'jonah', at: 's21', parts:
 codexAdd({ cat: 'PEOPLE', title: 'ANSEL CALLOWAY', at: 's23', parts: [
   { at: null, t: `Dessa's younger brother. Sixteen when the Breach came, a Keyholder, and the second name crossed off on Vance's hunt list.` },
   { at: 's14', t: `Old Calloway chose him because he was his to spend.` }], see: ['DESSA CALLOWAY', 'THE KEYHOLDERS'] });
+codexAdd({ cat: 'PEOPLE', title: 'ROSE', spr: 'rose', at: 's18', parts: [
+  { at: null, t: `Sable Crow outrider. Nine years of riding shotgun on Corva's mail wagons, with two revolvers and one rule: the mail gets through, and nobody reads it.` },
+  { at: 's18', t: `Corva says she lent Rose out. Rose says she quit. Both are true, which is how the Crows prefer their contracts. She still carries a bag of letters that never found a door.` },
+  { at: 's24', t: `She delivered the Exodus ticket for seat 114, the paper Nell Hartwell kept in her pocket. She never opened the envelope. She has not stopped thinking about it since.` },
+  { at: 's25', t: `She once delivered a letter on a Lower Fork street. A man in his shirtsleeves signed for it, laughing, with a washbasin in his hands.` }], see: ['SABLE CROWS', 'CORVA SABLE', 'UNDELIVERED LETTER', 'SEAT LEDGER', 'MENDER'] });
+codexAdd({ cat: 'PEOPLE', title: 'COG', spr: 'cog', at: 's20', parts: [
+  { at: null, t: `Twenty-three, lanky, and the youngest engineer the Dalton Combine ever put on its books. He calls himself an inventor. Ma Dalton calls him the rivet that never stops talking.` },
+  { at: 's20', t: `He built the crane bots of the Scrap Court to last an hour against a Rust Rider warlord. The squad wrecked three in four minutes. He considers it the best news of his year.` },
+  { at: 's7', t: `He wrote the load limits of the Launch Rail crane on a napkin and bolted its hip plate on himself. It was made to lift tanks. Nobody told him what for.` },
+  { at: 's21', t: `Tank 3217: he drew its baffle plates. Every one of the four thousand drawings carries his initials in the corner. He is re-reading them, one at a time.` }], see: ['DALTON COMBINE', 'MA DALTON', 'THE EXODUS PACT', 'TANK MOLD PLATE', 'GIANT HAND'] });
+codexAdd({ cat: 'PEOPLE', title: 'HOLT', spr: 'holt', at: 's22', parts: [
+  { at: null, t: `Amos Holt, retired sergeant of the Calloway Gate Guard. White hair, white beard, and the hand-cranked gatling gun the guard put in a shed when the dam went automatic.` },
+  { at: 's22', t: `He lived in Lower Fork. On the night of the Breach he dragged the old gun to the north gate and put forty rounds into GATE-3's shield, trying to shoot the lock chain off. The gate held. He has forgiven neither the gate nor himself.` },
+  { at: 's23', t: `Three winters ago he gave a boy called Ans a bed on his porch for a week. Vance's hounds found the porch a few days after the boy left. Ans was Ansel Calloway, Keyholder 2.` },
+  { at: 's25', t: `He will not walk into Lower Fork. He keeps the street instead, and tells nobody which door was his.` }], see: ['BULWARK', 'ANSEL CALLOWAY', 'LOWER FORK', 'SEAL HOUND', 'GATEPOST TALLY'] });
 
 // ----- SIGNALS -----
 codexAdd({ cat: 'SIGNALS', title: 'WARRANT 0001', at: 's17', parts: [
@@ -86,3 +101,12 @@ codexMore('THE TRIBUNAL', [], ['JUDGE VERITY']);
 codexMore('SHUTTLE 14', [], ['SEAT LEDGER']);
 codexMore('MENDER', [], ['SEAT LEDGER']);
 codexMore('SCRAPPER', [], ['MA DALTON']);
+
+// ----- the squad's humans in the older entries -----
+codexMore('BULWARK', [{ at: 's22', t: `Forty of his 311 dents were made by a retired sergeant who tried to shoot the chain off the gate that night. Bulwark knows exactly which ones.` }], ['HOLT']);
+codexMore('SABLE CROWS', [{ at: 's18', t: `The Crows do not sell their riders. They lend them, which is the same thing with better manners.` }], ['ROSE']);
+codexMore('DALTON COMBINE', [{ at: 's20', t: `The Combine's youngest engineer, Cog, drew the baffles for the Ark's tanks and the load limits for the launch rail's crane.` }], ['COG']);
+codexMore('MENDER', [{ at: 's24', t: `The paper in Nell's pocket was delivered by a Crow outrider who is now in the squad. Mender asked her not to say sorry. She said it anyway.` }], ['ROSE']);
+codexMore('ANSEL CALLOWAY', [{ at: 's22', t: `A sergeant named Holt put him up on a porch for a week, three winters ago. The boy hummed when he was scared.` }], ['HOLT']);
+codexMore('LOWER FORK', [{ at: 's22', t: `Holt's house was on the fifth street, blue door, a swing on the porch. He keeps count of the doors his neighbours left open.` }], ['HOLT']);
+codexMore('GIANT HAND', [], ['COG']);

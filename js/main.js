@@ -53,6 +53,34 @@ function button(x, y, w, h, label, fn, off, size, col, colHot) {
   ctx.font = (size || 28) + 'px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x + w / 2, y + h / 2 + 2);
   if (!off) uiB.push({ x, y, w, h, fn });
 }
+// Scrollable region for lists and texts that are taller than the screen. drawFn draws in content coordinates (as if nothing scrolled);
+// buttons it registers move and clip with it. Wheel over the area or drag the bar (sx) to scroll.
+const scrollOff = {}; let scrollAreas = {}, scrollDrag = null;
+function scrollArea(key, x, y, w, h, contentH, sx, drawFn) {
+  const max = Math.max(0, Math.round(contentH - h)), off = scrollOff[key] = Math.max(0, Math.min(max, scrollOff[key] || 0)), n0 = uiB.length, my = myF;
+  scrollAreas[key] = { x, y, w, h, max, sx };
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); ctx.translate(0, -off); myF = my + off;
+  drawFn();
+  myF = my; ctx.restore();
+  for (let i = n0; i < uiB.length; i++) { const b = uiB[i]; b.y -= off; b.cy0 = y; b.cy1 = y + h; }
+  if (max > 0) {
+    const th = Math.max(36, h * h / contentH), ty = y + (h - th) * off / max;
+    ctx.fillStyle = '#1a1c28'; ctx.fillRect(sx, y, 12, h); ctx.fillStyle = scrollDrag && scrollDrag.key === key ? '#ffd040' : '#80f0ff'; ctx.fillRect(sx + 1, ty, 10, th);
+  }
+}
+function scrollBy(key, d) { const a = scrollAreas[key]; if (a) scrollOff[key] = Math.max(0, Math.min(a.max, (scrollOff[key] || 0) + d)); }
+function scrollAt(px, py, bar) {
+  for (const k in scrollAreas) {
+    const a = scrollAreas[k]; if (a.max <= 0) continue;
+    if (bar ? (px >= a.sx - 8 && px <= a.sx + 20 && py >= a.y && py <= a.y + a.h) : (px >= a.x && px <= a.x + a.w + 24 && py >= a.y && py <= a.y + a.h)) return k;
+  }
+  return null;
+}
+function scrollDragTo(py) {
+  const a = scrollAreas[scrollDrag.key]; if (!a) return;
+  const th = Math.max(36, a.h * a.h / (a.h + a.max)), span = a.h - th;
+  scrollOff[scrollDrag.key] = Math.max(0, Math.min(a.max, Math.round((py - a.y - scrollDrag.grab) / span * a.max)));
+}
 // modal question; while it is open only its two buttons react
 function askConfirm(title, lines, yes, fn, danger) { confirmBox = { title, lines, yes, fn, danger: !!danger }; }
 function drawConfirm() {
@@ -156,7 +184,7 @@ function drawBattleHud() {
 
 // ---------- frame ----------
 function frame() {
-  ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0); ctx.imageSmoothingEnabled = false; uiB = [];
+  ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0); ctx.imageSmoothingEnabled = false; uiB = []; scrollAreas = {};
   if (scene !== prevScene) { if (scene === 'hub') hubLine = null; prevScene = scene; }
   ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
   if (scene === 'title') drawTitle();
@@ -190,10 +218,12 @@ function toXY(e) { const r = cv.getBoundingClientRect(); mxF = (e.clientX - r.le
 // Mouse: the button under the pointer. Touch: fingers are imprecise, so on small screens a tap near a small button still counts
 // (each button is treated as at least 44 CSS pixels wide and high); the closest one wins.
 function hitButton(touch) {
-  for (let i = uiB.length - 1; i >= 0; i--) { const b = uiB[i]; if (mxF >= b.x && mxF <= b.x + b.w && myF >= b.y && myF <= b.y + b.h) return b; }
+  const vis = b => b.cy0 === undefined || (myF >= b.cy0 && myF <= b.cy1);   // buttons inside a scroll area only react where they are visible
+  for (let i = uiB.length - 1; i >= 0; i--) { const b = uiB[i]; if (vis(b) && mxF >= b.x && mxF <= b.x + b.w && myF >= b.y && myF <= b.y + b.h) return b; }
   if (!touch) return null;
   const minSz = 44 * W / cv.clientWidth; let best = null, bd = 1e9;
   uiB.forEach(b => {
+    if (!vis(b)) return;
     const px = Math.max(0, (minSz - b.w) / 2), py = Math.max(0, (minSz - b.h) / 2);
     if (mxF >= b.x - px && mxF <= b.x + b.w + px && myF >= b.y - py && myF <= b.y + b.h + py) { const d = Math.hypot(mxF - b.x - b.w / 2, myF - b.y - b.h / 2); if (d < bd) { bd = d; best = b; } }
   });
@@ -203,13 +233,16 @@ cv.addEventListener('pointerdown', e => {
   toXY(e); Snd.init(); try { cv.setPointerCapture(e.pointerId); } catch (er) {}
   if (scene === 'card' && !confirmBox) { advanceCard(); return; }
   if (scene === 'cut' && !confirmBox) { const cb = hitButton(e.pointerType !== 'mouse'); if (cb) cb.fn(); else cutAdvance(); return; }
+  if (!confirmBox) { const sk = scrollAt(mxF, myF, true); if (sk) { const a = scrollAreas[sk], th = Math.max(36, a.h * a.h / (a.h + a.max)), ty = a.y + (a.h - th) * (scrollOff[sk] || 0) / a.max; scrollDrag = { key: sk, grab: myF >= ty && myF <= ty + th ? myF - ty : th / 2 }; scrollDragTo(myF); return; } }
   const b = hitButton(e.pointerType !== 'mouse');
   if (b) { b.fn(); return; }
   if (confirmBox) return;
   if (scene === 'battle' && B && myF > 60 && myF < H - 112) battlePointer('down', mxF / 4, myF / 4);
 });
-cv.addEventListener('pointermove', e => { toXY(e); if (scene === 'battle' && B && !confirmBox) battlePointer('move', mxF / 4, myF / 4); });
+cv.addEventListener('wheel', e => { toXY(e); const k = scrollAt(mxF, myF, false); if (k && !confirmBox) { e.preventDefault(); scrollBy(k, Math.sign(e.deltaY) * 60); } }, { passive: false });
+cv.addEventListener('pointermove', e => { toXY(e); if (scrollDrag) { scrollDragTo(myF); return; } if (scene === 'battle' && B && !confirmBox) battlePointer('move', mxF / 4, myF / 4); });
 function pointerEnd(e) {
+  if (scrollDrag) { scrollDrag = null; return; }
   if (scene === 'battle' && B) battlePointer('up');
   if (e && e.pointerType !== 'mouse') { mxF = -100; myF = -100; }   // no finger on screen, so nothing stays highlighted
 }

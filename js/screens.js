@@ -23,6 +23,7 @@ function drawHero() {
   hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.86)'; ctx.fillRect(0, 0, W, H);
   const hs = SAVE.hero, done = SAVE.heroDone;
   text(done ? 'YOUR HERO' : 'CREATE YOUR HERO', 40, 60, 40, '#fff');
+  if (done) hubTabs('hero');
   if (done) button(1130, 12, 120, 46, 'HOME', () => { saveGame(); scene = 'hub'; Snd.play('ui'); }, false, 22);
   panel(40, 90, 440, 590, '#80f0ff');
   const s = Art.hero(hs, Math.floor(time * 1.5) % 2); ctx.imageSmoothingEnabled = false;
@@ -58,28 +59,29 @@ function drawHero() {
 
 // ---------- codex ----------
 function drawCodex() {
-  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.82)'; ctx.fillRect(0, 70, W, H - 70); topBar('CODEX');
-  CODEX_CATS.forEach((c, i) => opt(40 + i * 172, 84, 164, 44, c, cxCat === i, () => { cxCat = i; cxSel = 0; Snd.play('ui'); }, false, 19));
+  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.82)'; ctx.fillRect(0, 70, W, H - 70); topBar('CODEX'); hubTabs('codex');
+  CODEX_CATS.forEach((c, i) => opt(40 + i * 172, 84, 164, 44, c, cxCat === i, () => { cxCat = i; cxSel = 0; scrollOff.cxList = 0; scrollOff.cxText = 0; Snd.play('ui'); }, false, 19));
   const list = CODEX.filter(e => e.cat === CODEX_CATS[cxCat]);
   panel(40, 150, 360, 530, '#80f0ff');
-  list.forEach((e, i) => {
+  scrollArea('cxList', 44, 154, 352, 522, 14 + list.length * 38, 410, () => list.forEach((e, i) => {
     const y = 164 + i * 38, vis = codexVisible(e);
     ctx.fillStyle = i === cxSel ? '#ffd040' : '#000'; ctx.fillRect(48, y - 2, 344, 34);
     ctx.fillStyle = vis ? (i === cxSel ? '#40c8e0' : '#242a40') : '#14161f'; ctx.fillRect(50, y, 340, 30);
     ctx.font = '18px ' + FONT; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = i === cxSel ? '#06101a' : vis ? '#d8e8ff' : '#444a5a';
     ctx.fillText(vis ? e.title : '???', 62, y + 17);
-    if (vis) uiB.push({ x: 50, y, w: 340, h: 30, fn: () => { cxSel = i; Snd.play('ui'); } });
-  });
+    if (vis) uiB.push({ x: 50, y, w: 340, h: 30, fn: () => { cxSel = i; scrollOff.cxText = 0; Snd.play('ui'); } });
+  }));
   panel(430, 150, 810, 530, '#80f0ff');
   const e = list[cxSel];
   if (!e || !codexVisible(e)) { text('Not discovered yet. Keep going.', 460, 220, 22, '#667'); return; }
   text(e.title, 460, 200, 32, '#ffd040');
   if (e.src) text(e.src, 460, 226, 15, '#80f0ff');
   if (e.spr) smallSprite(e.spr, 1170, 330, 3, Math.floor(time * 2) % 2);
-  let y = e.src ? 262 : 244; const mw = e.spr ? 640 : 740;
-  codexParts(e).forEach(p => {
-    const ok = cleared(p.at), lines = wrap(ok ? heroText(p.t) : '[ DATA CORRUPTED. PROGRESS THROUGH THE STORY TO RESTORE IT. ]', mw, 19);
-    lines.forEach(l => { text(l, 460, y, 19, ok ? '#d8e4ff' : '#4a5068'); y += 25; }); y += 12;
+  const y0 = e.src ? 262 : 244, mw = e.spr ? 640 : 740, parts = codexParts(e).map(p => { const ok = cleared(p.at); return { ok, lines: wrap(ok ? heroText(p.t) : '[ DATA CORRUPTED. PROGRESS THROUGH THE STORY TO RESTORE IT. ]', mw, 19) }; });
+  const endY = parts.reduce((s, p) => s + p.lines.length * 25 + 12, y0);
+  scrollArea('cxText', 440, 238, 780, 376, endY - 238, 1220, () => {
+    let y = y0;
+    parts.forEach(p => { p.lines.forEach(l => { text(l, 460, y, 19, p.ok ? '#d8e4ff' : '#4a5068'); y += 25; }); y += 12; });
   });
   // links to related entries the player has already unlocked
   const links = (e.see || []).map(codexFind).filter(t => t && codexVisible(t));
@@ -126,7 +128,7 @@ function famStanding(f) {
   return cleared('s14') ? 'Dessa knows what her house did.' : cleared('s26') ? (fl('dessa') === 'honest' ? 'Dessa trusts you with the truth.' : fl('dessa') === 'hidden' ? 'Dessa trusts you. She should not yet.' : 'Dessa watches the line.') : 'Unknown. Their gate is closed.';
 }
 function drawWorld() {
-  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.88)'; ctx.fillRect(0, 70, W, H - 70); topBar('THE DUST');
+  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.88)'; ctx.fillRect(0, 70, W, H - 70); topBar('THE DUST'); hubTabs('world');
   const mx = 30, my = 92; ctx.imageSmoothingEnabled = false; ctx.drawImage(Back.scene('worldmap'), mx, my, 640, 360);
   ctx.strokeStyle = '#80f0ff'; ctx.lineWidth = 4; ctx.strokeRect(mx - 2, my - 2, 644, 364);
   const rg = (t, x, y, c) => text(t, mx + x * 2, my + y * 2, 14, c || '#c8d0e8', 'center');
@@ -162,9 +164,9 @@ function drawWorld() {
 // ---------- memories: replay the scenes you have seen ----------
 let memCh = 1;
 function drawMemories() {
-  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.88)'; ctx.fillRect(0, 70, W, H - 70); topBar('MEMORIES');
+  hubBg(); blit(); ctx.fillStyle = 'rgba(8,10,24,0.88)'; ctx.fillRect(0, 70, W, H - 70); topBar('MEMORIES'); hubTabs('memories');
   const tabs = Object.keys(CHAPTERS).map(Number).concat([0]);
-  tabs.forEach((c, i) => opt(40 + i * 172, 84, 164, 40, c ? 'CH ' + c : 'OTHER', memCh === c, () => { memCh = c; Snd.play('ui'); }, false, 19));
+  tabs.forEach((c, i) => opt(40 + i * 172, 84, 164, 40, c ? 'CH ' + c : 'OTHER', memCh === c, () => { memCh = c; scrollOff.mem = 0; Snd.play('ui'); }, false, 19));
   text('Scenes you have seen. Watching them again changes nothing in your save.', 40, 160, 18, '#8890b0');
   const back = () => { scene = 'memories'; };
   const row = (y, title, ok, fn) => {
@@ -176,10 +178,11 @@ function drawMemories() {
       row(190 + i * 62, p[0], !!SAVE.seen[sceneKey(p[1])] && !!SCENES[p[1]], () => playScene(p[1], back, { replay: true })));
     return;
   }
-  STAGES.filter(q => q.ch === memCh).forEach((st, i) => {
+  const memList = STAGES.filter(q => q.ch === memCh);
+  scrollArea('mem', 30, 180, 1220, 536, 10 + memList.length * 56, 1256, () => memList.forEach((st, i) => {
     const y = 190 + i * 56, pre = hasStageScene('pre', st) && SAVE.seen['pre' + st.id], post = hasStageScene('post', st) && SAVE.seen['post' + st.id];
     panel(40, y, 1200, 46, pre || post ? '#80f0ff' : '#2a2c3a'); text(pre || post ? st.name.toUpperCase() : '???', 64, y + 31, 22, pre || post ? '#fff' : '#4a4e60');
     button(780, y + 6, 200, 34, 'BEFORE', () => playStageScene('pre', st, back, { replay: true }), !pre, 18);
     button(1000, y + 6, 200, 34, 'AFTER', () => playStageScene('post', st, back, { replay: true }), !post, 18);
-  });
+  }));
 }
